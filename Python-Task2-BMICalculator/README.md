@@ -1,6 +1,6 @@
 # NOMOLI FORGE — BMI Insight
 
-An advanced Python desktop BMI calculator project for the Oasis Infobyte Python Programming internship. Tasks 03–04 implement the offline calculation core, SQLite persistence and application services. Python 3.10+ is supported; no runtime packages are required.
+An advanced Python desktop BMI calculator project for the Oasis Infobyte Python Programming internship. Tasks 03–05 implement the offline calculation core, SQLite persistence, application services and a CustomTkinter desktop UI based on the approved Mockup 05 — Vitality Analytics. Python 3.10+ is required; Python 3.12 with Tk 8.6 is the tested desktop configuration.
 
 ## Completed scope
 
@@ -8,8 +8,17 @@ An advanced Python desktop BMI calculator project for the Oasis Infobyte Python 
 - Interactive measurement parsing with controlled `ValidationError` exceptions.
 - Immutable results with derived BMI and category.
 - Pure metric/imperial conversion utilities and automated pytest coverage.
+- Desktop Calculator, Profiles and History views with a horizontal navigation bar.
+- Live multicolour BMI gauge, classification metadata, summary cards and explicit saving.
+- Local mountain-reference background, readable empty states and a reserved trend container.
 
-SQLite profile and measurement persistence is implemented. No GUI, charts, dashboard, PDF reports, or network calls are implemented. The core remains independent of storage.
+SQLite profile and measurement persistence and the desktop GUI are implemented. Chart rendering, the Progress Dashboard and PDF reports remain planned; their navigation items show honest availability messages. No network calls are implemented. The core remains independent of storage and presentation.
+
+## Desktop preview
+
+![BMI Insight — saved result](docs/screenshots/03_saved.png)
+
+[All six screenshots and visual review](docs/TASK05_REVIEW.md). To use the desktop application, follow the Windows launch instructions below.
 
 ## Formula and categories
 
@@ -48,7 +57,7 @@ Python-Task2-BMICalculator/
 └── .gitignore
 ```
 
-Database and service packages sit alongside core under app. Visualization and UI packages remain planned. Dependencies belong in requirements.txt; pyproject.toml contains pytest configuration only.
+Database and service packages sit alongside core under app. The desktop presentation package is app/ui; Matplotlib visualization remains planned. Dependencies belong in requirements.txt; pyproject.toml contains pytest configuration only.
 
 ## Installation and tests
 
@@ -64,7 +73,7 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-Only installing test tooling needs access to a package source; calculations run offline. Task 03 verification: **139 passed, 0 failed, 0 skipped**. Tests include result-model and conversion tests in test_calculator.py.
+Only installing dependencies needs access to a package source; application use is offline. Task 03 verification: **139 passed, 0 failed, 0 skipped**. Tests include result-model and conversion tests in test_calculator.py.
 
 ## Usage and validation
 
@@ -161,13 +170,57 @@ tests/
   test_measurement_service.py
 ```
 
-`python main.py` initializes storage and exits; it is not a desktop interface. No runtime dependencies were added. Task 04 verification: **212 passed, 0 failed, 0 skipped**, including the unchanged 139 Task 03 cases.
+`python main.py` now launches the desktop interface and initializes storage. CustomTkinter and Pillow are desktop dependencies; Task 03–04 remain unchanged. Task 04 verification: **212 passed, 0 failed, 0 skipped**, including the unchanged 139 Task 03 cases.
+
+## Task 05: Desktop application
+
+The interface follows the selected image: horizontal top navigation, navy cards, turquoise highlights, mountain hero, left measurement panel, right gauge and interpretation, three summary cards and the lower Weight Trend Preview container. The image was used as a concrete layout reference. See [visual verification](docs/TASK05_REVIEW.md) for screenshots and differences.
+
+### Windows launch
+
+Use the standard Python 3.12 Windows installer with Tcl/Tk and pip enabled. Open Command Prompt in Python-Task2-BMICalculator:
+
+```bat
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe main.py
+```
+
+After setup, run_windows.bat uses .venv automatically. It otherwise tries the Windows Python launcher (py -3). If batch files are blocked by local security settings, use the direct Python command above. Do not disable operating-system protections.
+
+On macOS/Linux, activate your virtual environment, install requirements.txt, ensure Tk support is installed, and run `python main.py`. A graphical desktop is required. Tested desktop environment: Python 3.12.3, Tk 8.6.14, CustomTkinter 6.0.0 and Pillow. The cloud runtime's separate Tk 9 build produced poor font rendering; use Tk 8.6 for the verified appearance. A Windows desktop launch still needs local verification.
+
+### Workflow
+
+1. Create a local profile with New Profile, or choose one from the dropdown. Duplicate names show their unique IDs. Profiles supports select, rename and confirmed deletion.
+2. Enter height in **centimetres** and weight in **kilograms**. Height is converted to metres with the existing utility before Task 03 validation. Supported ranges remain 30–275 cm and 1–500 kg.
+3. Calculate BMI. The gauge, category, neutral explanation and calculation timestamp update from the unrounded result. Calculation alone does not save anything.
+4. Save Result to Profile persists through the Task 04 service. The button is disabled without a profile/result, after saving, or when inputs change. Editing fields or selecting another profile clears stale results. Reset clears inputs and results, preserving stored history.
+5. History retrieves the selected profile's records and supports confirmed deletion of one record. Empty profiles show an empty state. Selecting a profile never imports another profile's measurements.
+
+Age and gender are omitted because the existing profiles do not support those fields. They are neither collected nor inferred. Classification remains the standard adult reference; the interface makes no age/gender-based medical interpretation.
+
+Latest Weight and Total Records use SQLite data. Measurement Change compares the newest measurement to the **first measurement**, matching the reference label; it stays empty until two records exist. It is a signed arithmetic difference, not a health judgment. The underlying Task 04 comparison service still provides latest-versus-previous when needed.
+
+Gauge rendering is a display mapping over BMI 12–40; the marker saturates outside that range while the number and classification remain accurate. Text formatting never changes stored precision. Trend integration uses `UIController.trend_points()` backed by HistoryService.chart_data; the card has no invented line or data points. Trends, Dashboard and Reports navigation currently opens a clearly labelled planned-feature view.
+
+The main content scrolls in shorter windows; the top navigation and hero remain fixed. Minimum logical window size is 1240×860; the preferred visual review size is 1440×1010. Operating-system scaling may change the physical screen space needed. Native title-bar controls are preserved; the in-app right-hand controls also minimize, maximize and close the window.
+
+### Tests
+
+```bat
+.venv\Scripts\python.exe -m pytest -q
+```
+
+**Task 05 final verification: 240 passed, 0 failed, 0 skipped**, including 212 unchanged backend tests and 28 new controller/desktop tests. Desktop tests ran with a real Tk 8.6 GUI on a temporary Xvfb display. Without a graphical display, desktop tests explicitly skip (rather than pretending to run); controller and backend tests still run. Every database test uses isolated temporary SQLite files. No test or screenshot populates the real user database.
 
 ## Planned work and limitations
 
-The approved Mockup 05 — Vitality Analytics remains unchanged: horizontal navigation, dark navy, teal accents, circular BMI gauge and analytics components. CustomTkinter screens, Matplotlib chart rendering, Progress Dashboard and PDF reports remain unimplemented. Cloud sync, AI recommendations and authentication are outside current scope. No backup/restore UI or schema migrations beyond version-one initialization exist yet. Short-lived synchronous operations suit the current local scope; future UI should avoid blocking its event loop during slow storage operations. A confirmation preview is not a transactional lock.
+Full Matplotlib chart rendering belongs to Task 06. Progress Dashboard and PDF reports remain later work. There is no AI, cloud synchronization, authentication, backup/restore UI or general migration system. SQLite remains unencrypted local storage. Profile isolation is organizational, not an account security boundary.
 
-Task 04 is ready for review. Task 05 has not started. Next, agree on Task 05 scope and connect accepted services to the approved desktop design, preserving profile-scoped history and explicit deletion confirmation.
+The standalone high-resolution mountain asset and official vector logo were unavailable: the supplied image's clean mountain region is used locally, and line-based branding/icons are reconstructed. Typography falls back from Segoe UI to the platform font. Buttons use solid turquoise rather than the reference's luminous gradients; cards have simpler lighting and the gauge has no diffuse glow. These are documented differences, not claims of pixel-perfect reproduction.
+
+Task 05 stops at this implementation and review package. No Task 06 work, commit or push is performed automatically.
 
 ## Educational limitations
 
