@@ -1,0 +1,2 @@
+# No runtime dependencies. Test dependency only.
+pytest>=8,<10

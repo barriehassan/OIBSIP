@@ -1,0 +1,1 @@
+"""BMI Insight application package."""
