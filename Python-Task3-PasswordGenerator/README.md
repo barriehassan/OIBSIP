@@ -114,7 +114,7 @@ The strength display uses `length × log2(alphabet size)`, an approximate upper 
 
 ## Credits and originality
 
-Prepared for Hassan Barrie under NOMOLI FORGE, with AI assistance. This project continues the independently developed Password Forge source, rather than copying a public tutorial solution. The background image was supplied by the author; procedural artwork remains available as a fallback. Third-party dependencies: [Pillow](https://github.com/python-pillow/Pillow), [pyperclip](https://github.com/asweigart/pyperclip), and [pytest](https://github.com/pytest-dev/pytest). NOMOLI FORGE uses a text wordmark and a simple mountain motif matching the supplied UI reference. The separately selected company brand identity remains a separate deliverable.
+Prepared for Hassan Barrie under NOMOLI FORGE. This project continues the independently developed Password Forge source, rather than copying a public tutorial solution. The background image was supplied by the author; procedural artwork remains available as a fallback. Third-party dependencies: [Pillow](https://github.com/python-pillow/Pillow), [pyperclip](https://github.com/asweigart/pyperclip), and [pytest](https://github.com/pytest-dev/pytest). NOMOLI FORGE uses a text wordmark and a simple mountain motif matching the supplied UI reference. The separately selected company brand identity remains a separate deliverable.
 
 ## Mountain-glass interface update
 
