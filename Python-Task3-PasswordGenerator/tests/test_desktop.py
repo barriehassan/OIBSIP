@@ -44,3 +44,62 @@ def test_window_controls_and_persistent_entries():
         assert not errors
     finally:
         app._on_close()
+
+
+def test_lab_lifecycle_and_generator_isolation(monkeypatch):
+    from app.ui.window import PasswordForgeApp
+    import app.ui.window as window
+    app=PasswordForgeApp()
+    errors=[]
+    app.report_callback_exception=lambda *error:errors.append(error)
+    try:
+        app.update()
+        app._generate()
+        original=app.controller.current_password
+        history=list(app.controller.history)
+        app.auto_copy_var.set(True)
+        copied=[]
+        monkeypatch.setattr(window,'copy_to_clipboard',lambda *args:copied.append(args))
+        app._navigate('Password Lab')
+        assert app.lab.entry.winfo_exists()
+        app.lab.value.set('P@ssword1!')
+        app.after(250, app.quit)
+        app.mainloop()  # exercise the real debounce callback
+        app.update()
+        assert app.lab.assessment.score < 3
+        assert app.lab.entry.winfo_ismapped()
+        assert not app.password_entry.winfo_ismapped()
+        app.lab.toggle()
+        assert app.lab.entry.cget('show') == ''
+        app._hide()
+        assert app.lab.entry.cget('show') == '*'
+        app.lab.replace()
+        assert len(app.lab.value.get()) == 18
+        assert app.controller.current_password == original
+        assert list(app.controller.history) == history
+        assert not copied  # Lab bypasses auto-copy entirely
+        app.lab.value.set('PendingValue93!')
+        app._navigate('Generate')
+        app.update()
+        assert app.lab.value.get() == ''
+        assert app.lab.assessment.score is None
+        assert app.lab.pending is None
+        assert not app.lab.entry.winfo_ismapped()
+        assert app.password_entry.winfo_ismapped()
+        assert list(app.controller.history) == history
+        app._navigate('Password Lab')
+        app.lab.value.set('ClearValue93!')
+        app.lab._clear_clicked()
+        assert app.lab.value.get() == ''
+        assert app.lab.pending is None
+        # About is another navigation action and must clear Lab too.
+        monkeypatch.setattr(window.messagebox,'showinfo',lambda *args,**kwargs:None)
+        app.lab.value.set('AboutValue93!')
+        app._navigate('About')
+        assert app.lab.value.get() == ''
+        app.geometry('1000x680')
+        app.update()
+        app._draw(1000,680)
+        assert not errors
+    finally:
+        app._on_close()

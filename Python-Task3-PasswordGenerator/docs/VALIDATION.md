@@ -11,3 +11,7 @@ Mountain-glass redesign checked on 31 October 2026 using Python 3.12.14 and Tk 9
 Desktop dependencies are Pillow and pyperclip; Tk comes from the Python installation. CustomTkinter is no longer required. The CLI remains dependency-free.
 
 Run the full suite from the project directory with `python -m pytest -q`. Opt into the real-window test on a desktop by setting `RUN_DESKTOP_TESTS=1` before running pytest. The opt-in test does not change the system clipboard. Clipboard round-trip was checked separately using disposable generated data in the virtual display.
+
+## Task 04 — Password Lab
+
+The complete suite with desktop tests enabled passes **73 tests and 77 subchecks** under Linux virtual display / Tk 9.0.4. The original secure generation modules remain unchanged. Password Lab was visually inspected at 1440×900 and 1000×680. See `PASSWORD_LAB.md` for test scope, methodology and remaining Windows/macOS checks. Without the opt-in display flag, the two desktop tests are skipped.

@@ -7,6 +7,7 @@ from app.core.password_generator import PasswordOptions, CHARACTER_SETS
 from app.core.validator import DEFAULT_LENGTH, MIN_LENGTH, MAX_LENGTH, PasswordValidationError
 from app.services.clipboard import copy_to_clipboard
 from app.ui.controller import PasswordController
+from app.ui.password_lab import PasswordLabView
 from app.ui.glass import render_glass, WIDTH, HEIGHT
 
 WHITE = '#F4F7FF'
@@ -48,6 +49,7 @@ class PasswordForgeApp(tk.Tk):
             insertbackground='#102454', state='readonly', show='*', exportselection=False)
         self.length_entry = tk.Entry(self.canvas, textvariable=self.numeric_length_var,
             bg='#284479', fg=WHITE, insertbackground=WHITE, justify='center', relief='flat', bd=0)
+        self.lab = PasswordLabView(self)
         self.length_entry.bind('<Return>', self._on_length_entry)
         self.length_entry.bind('<FocusOut>', self._on_length_entry)
         self.canvas.bind('<Configure>', self._resize)
@@ -59,7 +61,7 @@ class PasswordForgeApp(tk.Tk):
         self.canvas.bind('<ISO_Left_Tab>', lambda event: self._tab(event, -1))
         self.canvas.bind('<Return>', self._activate)
         self.canvas.bind('<space>', self._activate)
-        self.bind('<Control-g>', lambda event: self._generate())
+        self.bind('<Control-g>', lambda event: self.lab.replace() if self.nav == 'Password Lab' else self._generate())
         self.bind('<Escape>', lambda event: self._hide())
         self.protocol('WM_DELETE_WINDOW', self._on_close)
 
@@ -113,10 +115,14 @@ class PasswordForgeApp(tk.Tk):
         self._text(128,150,'NOMOLI FORGE',19,bold=True,anchor='center')
         self._text(128,178,'Password Forge',15,anchor='center')
         self._text(128,217,'Every Password,\nUniquely Forged.',12,MUTED,anchor='center')
-        for i,(name,label) in enumerate((('Generate','＋  Generate'),('History','◷  History'),('Settings','⚙  Settings'),('About','ⓘ  About'))):
+        for i,(name,label) in enumerate((('Generate','＋  Generate'),('Password Lab','Password Lab'),('History','◷  History'),('Settings','⚙  Settings'),('About','ⓘ  About'))):
             self._button((34,282+i*64,222,332+i*64),label,lambda n=name:self._navigate(n),primary=self.nav==name,subtle=self.nav!=name)
-        self._check((34,655,224,684),self.auto_copy_var,'Auto copy')
-        self._text(42,696,'Ctrl+G  Generate\nEsc  Hide passwords',11,MUTED)
+        if self.nav == 'Password Lab':
+            self._text(42,660,'EPHEMERAL INPUT',11,MUTED,True)
+            self._text(42,696,'Ctrl+G  Replacement\nEsc  Hide passwords',11,MUTED)
+        else:
+            self._check((34,655,224,684),self.auto_copy_var,'Auto copy')
+            self._text(42,696,'Ctrl+G  Generate\nEsc  Hide passwords',11,MUTED)
         self._text(42,768,'PRIVATE BY DESIGN',11,GREEN,True)
         self._text(42,796,'Offline generation.\nNo accounts. No cloud.',12,MUTED,width=170)
         self._text(270,39,'NOMOLI FORGE',38,bold=True)
@@ -124,6 +130,12 @@ class PasswordForgeApp(tk.Tk):
         self._text(274,130,'Every Password, Uniquely Forged.',17,MUTED)
         self._text(1400,58,'●  LOCAL & PRIVATE',12,GREEN,True,'ne')
         self._text(1400,87,'A stronger start to your digital life.',13,WHITE,False,'ne')
+        if self.nav == 'Password Lab':
+            for entry in (self.password_entry, self.length_entry):
+                if hasattr(entry, '_canvas_item'):
+                    self.canvas.itemconfigure(entry._canvas_item, state='hidden')
+            self.lab.draw()
+            return
         self._text(290,222,'Generated password',22,bold=True)
         self._rect((290,268,976,344),'#DDE8FF','#D4E5FF')
         self.password_entry.configure(font=(self.mono_font,-max(16,round(27*self.scale))),show='' if self.show_password_var.get() else '*')
@@ -149,7 +161,7 @@ class PasswordForgeApp(tk.Tk):
         if not hasattr(entry, '_canvas_item'):
             entry._canvas_item=self.canvas.create_window(0,0,window=entry,anchor='nw')
         self.canvas.coords(entry._canvas_item,x*self.sx,y*self.sy)
-        self.canvas.itemconfigure(entry._canvas_item,width=width*self.sx,height=height*self.sy)
+        self.canvas.itemconfigure(entry._canvas_item,width=width*self.sx,height=height*self.sy,state='normal')
         self.canvas.tag_raise(entry._canvas_item)
 
     def _draw_strength(self):
@@ -210,11 +222,19 @@ class PasswordForgeApp(tk.Tk):
             self._button((1334,y+3,1390,y+35),'Copy',lambda p=password:self._copy_history_item(p),subtle=True)
 
     def _navigate(self, name):
+        if self.nav == 'Password Lab' and name != 'Password Lab':
+            self.lab.leave()
+            if hasattr(self.lab, 'feedback') and hasattr(self.lab.feedback, '_canvas_item'):
+                self.canvas.itemconfigure(self.lab.feedback._canvas_item, state='hidden')
         if name=='About':
             messagebox.showinfo('About Password Forge','NOMOLI FORGE · Password Forge\nEvery Password, Uniquely Forged.\n\nSecure local generation using Python secrets.\nHistory stays in memory. Clipboard contents can persist.\nStrength is an estimate, not a breach check.',parent=self)
+            self._draw()
             return
         self.nav=name
+        self._focus=-1
         self._draw()
+        if name == 'Password Lab':
+            self.lab.entry.focus_set()
         if name=='Settings':self.length_entry.focus_set()
         elif name=='History':self._status('Recent passwords stay in memory. Use Reveal history to inspect them.')
 
@@ -223,6 +243,8 @@ class PasswordForgeApp(tk.Tk):
         self._draw()
 
     def _on_length_entry(self, event=None):
+        if self.nav == 'Password Lab':
+            return
         try:
             number=int(self.numeric_length_var.get())
             if not MIN_LENGTH<=number<=MAX_LENGTH:raise ValueError
@@ -257,6 +279,8 @@ class PasswordForgeApp(tk.Tk):
         self._toggle(self.show_password_var)
 
     def _hide(self):
+        self.lab.visible = False
+        self.lab.entry.configure(show='*')
         self.show_password_var.set(False)
         self.show_history_var.set(False)
         self._draw()
@@ -287,7 +311,7 @@ class PasswordForgeApp(tk.Tk):
     def _click(self,event):
         x,y=event.x/self.sx,event.y/self.sy
         self.canvas.focus_set()
-        self._dragging=282<=x<=688 and 575<=y<=612
+        self._dragging=self.nav != 'Password Lab' and 282<=x<=688 and 575<=y<=612
         if self._dragging:
             self._slider(x)
             return
@@ -311,10 +335,10 @@ class PasswordForgeApp(tk.Tk):
             next_focus=self._focus+direction
             if next_focus>=len(self.actions):
                 self._focus=-1
-                self.length_entry.focus_set()
+                (self.lab.entry if self.nav == 'Password Lab' else self.length_entry).focus_set()
             elif next_focus<0:
                 self._focus=len(self.actions)-1
-                self.password_entry.focus_set()
+                (self.lab.entry if self.nav == 'Password Lab' else self.password_entry).focus_set()
             else:
                 self._focus=next_focus
                 self._draw_focus()
@@ -332,6 +356,7 @@ class PasswordForgeApp(tk.Tk):
         return 'break'
 
     def _on_close(self):
+        self.lab.leave()
         self.password_var.set('')
         self.controller.close()
         if self._pending:self.after_cancel(self._pending)

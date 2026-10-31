@@ -121,3 +121,20 @@ Prepared for Hassan Barrie under NOMOLI FORGE. This project continues the indepe
 The desktop now follows the supplied reference: full-window landscape, frosted navy panels, a sidebar, an estimated-strength ring, readable settings, and five compact history rows. Panel backgrounds are composited with Pillow; widgets use standard Tk, avoiding CustomTkinter font compatibility issues.
 
 Keyboard: **Ctrl+G** generates, **Esc** masks output and history, and **Tab** moves through canvas actions and input fields. **Enter/Space** activates focused actions. History remains masked until revealed. Each generation masks the new password again. Long history previews are shortened visually; copy always uses the complete value.
+
+## Task 04: Password Lab
+
+Select **Password Lab** in the sidebar to assess a password locally. The field is masked initially, with Show/Hide and Clear controls. Findings update after a short typing pause. Input is cleared when leaving the page, opening About, or closing the app. **Ctrl+G** in Lab creates a fresh random replacement; **Esc** masks the field.
+
+Install the updated requirements before launching:
+
+```bash
+python -m pip install -r requirements.txt
+python main.py
+```
+
+One additional dependency, [zxcvbn-python](https://github.com/dwolfhub/zxcvbn-python), provides local pattern-based strength estimation. No external API or password upload is used. If unavailable, Lab shows no strength score and asks you to install requirements; the generator remains independent.
+
+The estimated rating is separate from the existing generator's length/category policy. Manual input and Lab replacements never enter generator history or trigger automatic copying. The replacement is independently generated using the unchanged secure backend, rather than modifying your password with a predictable suffix.
+
+Analysis is limited to **72 Unicode code points**; longer input is marked Not evaluated, without silently scoring a prefix. Input buffers are limited to 4096 characters. This is an estimator, not a breach check, proof of randomness, or guarantee of security. Passphrase generation is not included. See [Task 04 implementation report](docs/PASSWORD_LAB.md) for methodology, changed files, tests, and remaining platform checks.
