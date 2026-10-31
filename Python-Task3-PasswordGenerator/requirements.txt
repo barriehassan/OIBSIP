@@ -1,4 +1,4 @@
 # Tested runtime dependencies; Tk is supplied by Python.
 # zxcvbn 4.5.0 is bundled with its MIT license under app/_vendor/.
-Pillow==12.3.0
+Pillow==13.0.0
 pyperclip==1.11.0
