@@ -2,7 +2,7 @@ import dataclasses
 import sys
 from unittest.mock import Mock
 import pytest
-import zxcvbn
+import app._vendor.zxcvbn as zxcvbn
 from app.core.password_lab import evaluate_password, generate_replacement
 from app.core.password_generator import PasswordOptions, selected_character_sets
 
@@ -72,9 +72,9 @@ def test_no_raw_tokens_or_feedback_in_result(monkeypatch):
 
 
 def test_missing_dependency_is_unavailable_not_strong(monkeypatch):
-    monkeypatch.setitem(sys.modules,'zxcvbn',None)
+    monkeypatch.setitem(sys.modules,'app._vendor.zxcvbn',None)
     result=evaluate_password('SampleForUnavailable98!')
-    assert result.rating == 'Unavailable' and result.score is None
+    assert result.rating == 'Setup needed' and result.score is None
 
 
 def test_secure_replacement_satisfies_existing_rules():
@@ -101,3 +101,25 @@ def test_assessment_needs_no_network(monkeypatch):
     monkeypatch.setattr(socket,'create_connection',blocked)
     result=evaluate_password('OfflineSampleForTest47!')
     assert result.score is not None
+
+
+def test_estimator_works_without_site_packages():
+    """Reproduce the laptop case: no separately installed zxcvbn dependency."""
+    import subprocess
+    from pathlib import Path
+    project=Path(__file__).resolve().parents[1]
+    script="""
+from app.core.password_lab import evaluate_password
+import importlib.util
+assert importlib.util.find_spec('zxcvbn') is None
+weak=evaluate_password('password')
+strong=evaluate_password('V8!xQ2@kM9#rT5$pL7')
+assert weak.score == 0
+assert strong.score == 4
+print('Offline estimator passed')
+"""
+    # -S disables site-packages; the application is loaded from this directory.
+    result=subprocess.run([sys.executable,'-S','-c',script],cwd=project,
+        capture_output=True,text=True,timeout=10)
+    assert result.returncode == 0, 'Standalone estimator verification failed'
+    assert result.stdout.strip() == 'Offline estimator passed'

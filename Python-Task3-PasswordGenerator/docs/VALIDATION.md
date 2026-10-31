@@ -15,3 +15,7 @@ Run the full suite from the project directory with `python -m pytest -q`. Opt in
 ## Task 04 — Password Lab
 
 The complete suite with desktop tests enabled passes **73 tests and 77 subchecks** under Linux virtual display / Tk 9.0.4. The original secure generation modules remain unchanged. Password Lab was visually inspected at 1440×900 and 1000×680. See `PASSWORD_LAB.md` for test scope, methodology and remaining Windows/macOS checks. Without the opt-in display flag, the two desktop tests are skipped.
+
+## Offline strength-meter fix
+
+74 passed, 77 subchecks passed with desktop tests enabled. The standalone estimator test disables site-packages to reproduce a machine without the previously required zxcvbn dependency. Both Very weak and Strong ratings evaluate successfully. The estimator is now bundled and no longer listed in requirements.txt.

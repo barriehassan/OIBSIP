@@ -84,14 +84,20 @@ class PasswordLabView:
         a._button((798,299,877,342),'Hide' if self.visible else 'Show',self.toggle)
         a._button((887,299,964,342),'Clear',self._clear_clicked)
         a._button((290,378,699,429),'Generate a fresh replacement',self.replace,primary=True)
-        a._text(716,382,'Independent random password.\nNever a predictable suffix.',12,MUTED,width=250)
+        a._button((713,378,976,429),'Check now',self._evaluate)
         color=COLORS[result.score] if result.score is not None else CYAN
         a._text(1042,222,'Estimated strength',21,bold=True)
         a._text(1043,276,result.rating,28,color,True)
         a._rect((1044,326,1394,338),'#496797',radius=5)
         if result.progress:
             a._rect((1044,326,1044+350*result.progress,338),color,radius=5)
-        a._text(1044,360,'Local pattern-based estimate.\nNo breach database check.\nNo guarantee of security.',13,MUTED,width=345)
+        if result.rating == 'Setup needed':
+            hint = 'Estimator files missing.\nPull the complete project and restart.\nSee recovery details below.'
+        elif result.rating == 'Unavailable':
+            hint = 'Analysis could not complete.\nClear the field and retry.\nNo password data was logged.'
+        else:
+            hint = 'Local pattern-based estimate.\nNo breach database check.\nNo guarantee of security.'
+        a._text(1044,360,hint,13,MUTED,width=345)
         a._text(290,496,'Input profile & policy',21,bold=True)
         a._text(290,538,f'Length: {result.length} characters',16,bold=True)
         composition=', '.join(result.composition) if result.composition else 'None / not analyzed'

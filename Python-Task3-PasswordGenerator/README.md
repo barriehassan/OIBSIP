@@ -133,8 +133,12 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-One additional dependency, [zxcvbn-python](https://github.com/dwolfhub/zxcvbn-python), provides local pattern-based strength estimation. No external API or password upload is used. If unavailable, Lab shows no strength score and asks you to install requirements; the generator remains independent.
+[zxcvbn-python](https://github.com/dwolfhub/zxcvbn-python) 4.5.0 is bundled under `app/_vendor/zxcvbn` with its MIT license. No separate zxcvbn installation, external API, or password upload is needed. Missing bundled files show Setup needed; unexpected analysis errors show Unavailable with safe recovery instructions. The generator remains independent.
 
 The estimated rating is separate from the existing generator's length/category policy. Manual input and Lab replacements never enter generator history or trigger automatic copying. The replacement is independently generated using the unchanged secure backend, rather than modifying your password with a predictable suffix.
 
 Analysis is limited to **72 Unicode code points**; longer input is marked Not evaluated, without silently scoring a prefix. Input buffers are limited to 4096 characters. This is an estimator, not a breach check, proof of randomness, or guarantee of security. Passphrase generation is not included. See [Task 04 implementation report](docs/PASSWORD_LAB.md) for methodology, changed files, tests, and remaining platform checks.
+
+### Fix for an Unavailable strength meter
+
+Close the app, run `git pull --ff-only origin main` from the OIBSIP repository folder, then reopen `Python-Task3-PasswordGenerator/main.py` using your normal interpreter. The estimator is now included in the source, so installing it into a different Python environment cannot break Lab. Type a disposable test such as `password`; it should rate Very weak after a brief pause. **Check now** also triggers evaluation explicitly.

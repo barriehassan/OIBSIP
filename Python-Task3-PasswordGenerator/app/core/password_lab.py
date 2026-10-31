@@ -63,8 +63,8 @@ def evaluate_password(password: str) -> LabAssessment:
     if re.search(r'(.)\1{2,}', password, flags=re.DOTALL):
         issues.append('Repeated characters detected.')
     try:
-        # Optional import keeps generation working if this dependency is absent.
-        from zxcvbn import zxcvbn
+        # Bundled estimator avoids interpreter/pip mismatches and works offline.
+        from app._vendor.zxcvbn import zxcvbn
         raw = zxcvbn(password)
         score = int(raw['score'])
         if not 0 <= score <= 4:
@@ -81,11 +81,15 @@ def evaluate_password(password: str) -> LabAssessment:
         if patterns & {'date', 'regex'}:
             issues.append('Date or year-like pattern detected.')
         del raw
+    except ImportError:
+        return LabAssessment(length, composition, not notes, tuple(notes), None,
+            'Setup needed', tuple(issues + ['Bundled estimator files are missing or cannot load.']),
+            ('Update the complete project folder with git pull, then restart Password Forge.',))
     except Exception:
         # Estimator errors can include user input. Never propagate or log them.
         return LabAssessment(length, composition, not notes, tuple(notes), None,
             'Unavailable', tuple(issues + ['Strength estimator unavailable; no score assigned.']),
-            ('Install the project requirements and retry. Generation still works independently.',))
+            ('Clear the field and retry, or restart the app. Generation still works independently.',))
     if any('Repeated' in issue for issue in issues):
         recommendations.append('Avoid repeating characters or blocks.')
     if patterns & {'sequence', 'spatial', 'date', 'regex', 'dictionary'}:

@@ -12,7 +12,7 @@ Input is masked by default. A 180 ms debounce avoids analyzing every keystroke, 
 
 ## Methodology and limitations
 
-- Local zxcvbn-python 4.5.0 (one added dependency, bounded `>=4.4,<5`) estimates guessability using dictionary/password, repeat, sequence, keyboard, date and other patterns. Scores 0–4 map to Very weak, Weak, Fair, Good, Strong. The five-step visual indicator represents that score; it is not a probability of safety.
+- Bundled local zxcvbn-python 4.5.0 (MIT licensed; no separate pip dependency) estimates guessability using dictionary/password, repeat, sequence, keyboard, date and other patterns. Scores 0–4 map to Very weak, Weak, Fair, Good, Strong. The five-step visual indicator represents that score; it is not a probability of safety.
 - Only fixed issue descriptions leave the estimator adapter. Raw results include passwords and matched tokens, so they are discarded rather than retained or displayed. Estimator feedback/error messages are not forwarded. Exceptions produce an Unavailable state with no score; they are not printed or logged.
 - Composition is descriptive. Reusing `validate_settings` reports generator compatibility (8–64 characters and at least two categories) separately. Passing these rules does not imply strength. A long lowercase password can estimate well yet fail the generator policy.
 - Length is counted as Python Unicode code points, with no stripping or normalization. Analysis is limited to 72 code points as recommended by the estimator to bound work. Larger inputs are not truncated or assigned a partial score. The UI buffer accepts at most 4096 characters.
@@ -80,3 +80,11 @@ Task 04 was implemented and tested before publication. Committing and pushing th
 ## Estimator source
 
 [zxcvbn-python project and API guidance](https://github.com/dwolfhub/zxcvbn-python). Its documented 72-character default is preserved; bundled dictionaries run locally.
+
+## Strength-meter setup fix
+
+A user reported Unavailable on the laptop. The old implementation treated a missing external zxcvbn package and every estimator runtime error identically. Native typing reproduced correct evaluation in an environment where the package was installed; missing installation or a different launch interpreter was the likely laptop cause, not a proven callback failure.
+
+The licensed upstream estimator and dictionaries are now shipped inside the app with namespace-only relative-import adjustments. No scoring logic was changed. Missing bundled files now say Setup needed, unexpected estimator failures say Unavailable, and both have visible recovery guidance. A Check now action complements debounced evaluation. Errors remain sanitized and never include input.
+
+Verification: **74 passed, 77 subchecks passed**, including real-window tests under Tk 9. A separate Python process with `-S` (no site-packages) confirms weak and strong assessments work without an installed zxcvbn package. Windows still needs confirmation after pulling the update. Source attribution and license are in `app/_vendor/zxcvbn/VENDOR.md` and `LICENSE.txt`.
