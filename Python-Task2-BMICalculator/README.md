@@ -1,6 +1,6 @@
 # NOMOLI FORGE — BMI Insight
 
-An advanced Python desktop BMI calculator project for the Oasis Infobyte Python Programming internship. Tasks 03–05 implement the offline calculation core, SQLite persistence, application services and a CustomTkinter desktop UI based on the approved Mockup 05 — Vitality Analytics. Python 3.10+ is required; Python 3.12 with Tk 8.6 is the tested desktop configuration.
+An advanced Python desktop BMI calculator project for the Oasis Infobyte Python Programming internship. Tasks 03–06 implement the offline calculation core, SQLite persistence, application services and a CustomTkinter desktop UI based on the approved Mockup 05 — Vitality Analytics. Python 3.10+ is required; Python 3.12 with Tk 8.6 is the tested desktop configuration.
 
 ## Completed scope
 
@@ -10,15 +10,18 @@ An advanced Python desktop BMI calculator project for the Oasis Infobyte Python 
 - Pure metric/imperial conversion utilities and automated pytest coverage.
 - Desktop Calculator, Profiles and History views with a horizontal navigation bar.
 - Live multicolour BMI gauge, classification metadata, summary cards and explicit saving.
-- Local mountain-reference background, readable empty states and a reserved trend container.
+- Local mountain-reference background and readable empty states.
+- Embedded Matplotlib BMI/weight charts, date filters and full-precision historical statistics.
 
-SQLite profile and measurement persistence and the desktop GUI are implemented. Chart rendering, the Progress Dashboard and PDF reports remain planned; their navigation items show honest availability messages. No network calls are implemented. The core remains independent of storage and presentation.
+SQLite profile and measurement persistence and the desktop GUI are implemented. BMI/weight chart rendering and the Trends page are implemented. Progress Dashboard and PDF reports remain planned; their navigation items show honest availability messages. No network calls are implemented. The core remains independent of storage and presentation.
 
 ## Desktop preview
 
-![BMI Insight — saved result](docs/screenshots/03_saved.png)
+![BMI Insight — Calculator with embedded weight preview](docs/screenshots/task06/calculator.png)
 
-[All six screenshots and visual review](docs/TASK05_REVIEW.md). To use the desktop application, follow the Windows launch instructions below.
+![BMI Insight — Measurement Trends](docs/screenshots/task06/trends.png)
+
+[Task 06 screenshots and verification](docs/TASK06_REVIEW.md). The [Task 05 visual review](docs/TASK05_REVIEW.md) remains as milestone history. To use the desktop application, follow the Windows launch instructions below.
 
 ## Formula and categories
 
@@ -57,7 +60,7 @@ Python-Task2-BMICalculator/
 └── .gitignore
 ```
 
-Database and service packages sit alongside core under app. The desktop presentation package is app/ui; Matplotlib visualization remains planned. Dependencies belong in requirements.txt; pyproject.toml contains pytest configuration only.
+Database and service packages sit alongside core under app. The desktop presentation package is app/ui; Matplotlib renderers are in app/visualization, with data preparation in app/services/analytics_service.py. Dependencies belong in requirements.txt; pyproject.toml contains pytest configuration only.
 
 ## Installation and tests
 
@@ -202,7 +205,7 @@ Age and gender are omitted because the existing profiles do not support those fi
 
 Latest Weight and Total Records use SQLite data. Measurement Change compares the newest measurement to the **first measurement**, matching the reference label; it stays empty until two records exist. It is a signed arithmetic difference, not a health judgment. The underlying Task 04 comparison service still provides latest-versus-previous when needed.
 
-Gauge rendering is a display mapping over BMI 12–40; the marker saturates outside that range while the number and classification remain accurate. Text formatting never changes stored precision. Trend integration uses `UIController.trend_points()` backed by HistoryService.chart_data; the card has no invented line or data points. Trends, Dashboard and Reports navigation currently opens a clearly labelled planned-feature view.
+Gauge rendering is a display mapping over BMI 12–40; the marker saturates outside that range while the number and classification remain accurate. Text formatting never changes stored precision. Trend charts use AnalyticsService snapshots backed by the existing HistoryService. UIController.trend_points() remains available for compatibility. The preview uses actual saved records. Trends opens the functional Measurement Trends screen; Dashboard and Reports remain clearly labelled planned features.
 
 The main content scrolls in shorter windows; the top navigation and hero remain fixed. Minimum logical window size is 1240×860; the preferred visual review size is 1440×1010. Operating-system scaling may change the physical screen space needed. Native title-bar controls are preserved; the in-app right-hand controls also minimize, maximize and close the window.
 
@@ -214,13 +217,63 @@ The main content scrolls in shorter windows; the top navigation and hero remain 
 
 **Task 05 final verification: 240 passed, 0 failed, 0 skipped**, including 212 unchanged backend tests and 28 new controller/desktop tests. Desktop tests ran with a real Tk 8.6 GUI on a temporary Xvfb display. Without a graphical display, desktop tests explicitly skip (rather than pretending to run); controller and backend tests still run. Every database test uses isolated temporary SQLite files. No test or screenshot populates the real user database.
 
+## Task 06: Trends and historical analytics
+
+Click **Trends** in the existing horizontal navigation, or use the Trends shortcut in the Calculator preview. Select a profile and measurement period. The BMI and weight charts show each stored measurement, connected in timestamp order when at least two measurements exist. One measurement shows one labelled marker; empty histories and empty filters show explicit empty states. The Calculator's embedded Weight Trend Preview defaults to Last 6 months and has its own period selector and latest-weight label.
+
+Optional BMI reference lines at **18.5, 25 and 30** match Task 03 categories. They can be turned off on Trends. These are adult classification references, not diagnoses. Charts fit the actual data, including values outside the reference range.
+
+### Period semantics
+
+- Last 30 days: rolling 30×24 hours.
+- Last 3/6/12 months: calendar months, clamping month-end dates (e.g. October 31 minus six months becomes April 30).
+- Filter bounds are inclusive and use UTC with the current instant as the upper bound. Future-dated records are excluded from rolling filters.
+- All records includes all stored measurements, including future-dated entries if present.
+- Both charts and every Trends statistic use the **same selected-period subset**. Date filtering does not alter or delete stored records.
+- Measurement dates on charts are explicitly UTC; History continues showing local time.
+
+Records sort by timestamp and ID. Identical timestamps retain their separate IDs and original values; equal-time markers may overlap and an on-chart note makes that explicit. No data is averaged, jittered or silently dropped. Dates use fewer readable axis ticks without removing measurements.
+
+### Statistics
+
+Trends displays latest/previous BMI and weight, BMI/weight change versus the immediately previous measurement, BMI/weight change versus the first measurement in the selected period, highest/lowest/average BMI, and total selected measurements. Arithmetic uses stored full-precision floats; formatting occurs only for display. Differences have a signed value without a beneficial/harmful label. Fewer than two measurements shows a dash for changes. An empty dataset has count zero and missing statistics. Calculator summary cards retain their all-history latest/count/change-versus-first meaning.
+
+### Architecture and refresh
+
+```text
+app/services/analytics_service.py     # One history read, UTC filters, typed snapshots/statistics
+app/visualization/chart_theme.py      # Shared dark plotting style
+app/visualization/bmi_chart.py        # BMI plot and optional category references
+app/visualization/weight_chart.py     # Full and compact weight plots
+app/ui/chart_widget.py                # FigureCanvasTkAgg lifecycle and redraw reuse
+app/ui/trends_view.py                 # Profile, period, charts and statistics view
+```
+
+Existing HistoryService/repositories supply all records. GUI modules execute no SQL. Matplotlib renderers accept prepared AnalyticsData and have no SQLite/Tk dependencies. FigureCanvasTkAgg embeds charts inside the established navy cards; pyplot/show is never used. Figures/canvases are reused when switching profiles or periods and unchanged datasets do not redraw unnecessarily. Closing the view/application cancels pending TkAgg draws, clears figures and releases their canvases.
+
+Saving or deleting measurements and selecting or deleting profiles refreshes all chart/statistic data, including hidden Trends views. Period changes refresh their respective view. Read failures clear old chart/summary data rather than showing another profile's stale values. Changes made by another application/process are picked up when revisiting Trends or refreshing via an app action; there is no background database watcher.
+
+All plotted records are retained for large histories. Marker size decreases above 500 records; above 2,000, artists are rasterized for efficient rendering. The renderer disables path simplification. A 3,000-record rendering case is tested. One profile-history read supplies a snapshot; filtering/statistics happen in memory. Extremely large histories still need more memory and synchronous render time; there is no pagination/downsampling or asynchronous database layer in this task.
+
+### Installation, tests and verification
+
+Matplotlib **3.10.x** is declared in the existing requirements.txt; install/update with the same Windows command:
+
+```bat
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe main.py
+.venv\Scripts\python.exe -m pytest -q
+```
+
+Final Task 06 test run: **276 passed, 0 failed, 0 skipped**. This includes all 240 unchanged prior tests and 36 new analytics/rendering/TkAgg integration cases. Chart-only tests use FigureCanvasAgg. Desktop tests ran under a real Tk 8.6/Xvfb display with temporary SQLite files. Without a graphical display, desktop tests explicitly skip. No Windows GUI testing is claimed.
+
+The entry point was smoke-launched with an isolated application-data directory, remained running and produced no stderr. [Verified captures and detailed review](docs/TASK06_REVIEW.md) cover Calculator, Trends, filters, compact layout and empty/profile-isolated states.
+
 ## Planned work and limitations
 
-Full Matplotlib chart rendering belongs to Task 06. Progress Dashboard and PDF reports remain later work. There is no AI, cloud synchronization, authentication, backup/restore UI or general migration system. SQLite remains unencrypted local storage. Profile isolation is organizational, not an account security boundary.
+Task 06 implements charts; Progress Dashboard, PDF reports, AI and cloud features remain unimplemented. No Task 07 work starts automatically. SQLite remains local and unencrypted; there is no general migration system or backup UI. Profile isolation remains organizational rather than authenticated access control.
 
-The standalone high-resolution mountain asset and official vector logo were unavailable: the supplied image's clean mountain region is used locally, and line-based branding/icons are reconstructed. Typography falls back from Segoe UI to the platform font. Buttons use solid turquoise rather than the reference's luminous gradients; cards have simpler lighting and the gauge has no diffuse glow. These are documented differences, not claims of pixel-perfect reproduction.
-
-Task 05 stops at this implementation and review package. No Task 06 work, commit or push is performed automatically.
+The approved horizontal navigation, mountain hero, cards and gauge are preserved. Chart backgrounds match the existing Task 05 navy cards, with teal #14B8A6 and cyan #06B6D4 data lines, readable grey labels and subtle grid lines. The Calculator chart is compact; full statistics and larger plots live in Trends. Native Windows rendering/scaling still needs local manual review. Original high-resolution standalone mountain artwork and official vector branding were unavailable as documented in Task 05. No commit/push is performed without approval.
 
 ## Educational limitations
 

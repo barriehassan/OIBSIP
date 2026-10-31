@@ -9,6 +9,7 @@ from app.database.models import Measurement, Profile
 from app.services.profile_service import ProfileService
 from app.services.measurement_service import MeasurementService
 from app.services.history_service import HistoryService
+from app.services.analytics_service import AnalyticsService
 
 @dataclass(frozen=True)
 class Summary:
@@ -23,6 +24,7 @@ class UIController:
         self.profiles = profiles
         self.measurements = measurements
         self.history = history
+        self.analytics = AnalyticsService(history)
         self.profile_id: int | None = None
         self.result: BMIResult | None = None
         self.saved: Measurement | None = None

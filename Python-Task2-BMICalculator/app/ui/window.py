@@ -11,6 +11,9 @@ from app.database.errors import DatabaseError
 from .controller import UIController
 from .gauge import BMIGauge
 from .icons import icon
+from .chart_widget import ChartWidget
+from .trends_view import TrendsView
+from app.services.analytics_service import PERIODS, prepare_history
 from .theme import BG, CARD, INNER, BORDER, TEXT, MUTED, TEAL, TEAL_DARK, CORAL, FONT
 
 ASSETS = Path(__file__).resolve().parents[2] / 'assets'
@@ -50,6 +53,8 @@ class BMIWindow(ctk.CTk):
         self.grid_columnconfigure(0,weight=1)
         self.grid_rowconfigure(2,weight=1)
         self.active_page = 'Calculator'
+        self.trends_page = None
+        self.preview_period = 'Last 6 months'
         self.profile_map: dict[str,int] = {}
         self.weight = tk.StringVar()
         self.height = tk.StringVar()
@@ -233,10 +238,24 @@ class BMIWindow(ctk.CTk):
         summaries.grid_rowconfigure(0,weight=1)
         trend=card(right);trend.grid(row=2,column=0,sticky='nsew');trend.grid_columnconfigure(0,weight=1);trend.grid_rowconfigure(2,weight=1)
         ctk.CTkLabel(trend,text='  Weight Trend Preview',image=icon('trends',23),compound='left',font=(FONT,16,'bold'),text_color=TEXT).grid(row=0,column=0,sticky='w',padx=20,pady=(13,0))
-        label(trend,'Your latest weight measurements',12,MUTED).grid(row=1,column=0,sticky='w',padx=42)
-        button(trend,'View History  →',lambda:self.navigate('History'),width=140).grid(row=0,column=1,rowspan=2,padx=18,pady=(12,0))
-        self.trend_note=label(trend,'',14,MUTED,justify='center',wraplength=650)
-        self.trend_note.grid(row=2,column=0,columnspan=2,padx=20,pady=12)
+        self.trend_note=label(trend,'Saved measurements · UTC dates',11,MUTED)
+        self.trend_note.grid(row=1,column=0,sticky='w',padx=42)
+        controls=ctk.CTkFrame(trend,fg_color='transparent')
+        controls.grid(row=0,column=1,rowspan=2,padx=14,pady=(10,0))
+        self.preview_selector=ctk.CTkOptionMenu(controls,values=list(PERIODS),command=self.change_preview_period,
+            fg_color=INNER,button_color=TEAL_DARK,font=(FONT,11),width=150,height=32)
+        self.preview_selector.set(self.preview_period);self.preview_selector.pack(side='left',padx=(0,8))
+        button(controls,'Trends →',lambda:self.navigate('Trends'),width=90).pack(side='left')
+        self.preview_chart=ChartWidget(trend,'weight',compact=True,height=125)
+        self.preview_chart.grid(row=2,column=0,columnspan=2,sticky='nsew',padx=16,pady=(2,10))
+
+    def change_preview_period(self,period: str) -> None:
+        self.preview_period=period;self.refresh_summary()
+
+    def select_trends_profile(self,profile_id: int | None) -> None:
+        try:
+            self.controller.select(profile_id);self.reload_profiles();self.reset();self.refresh_summary()
+        except (ValidationError,DatabaseError) as error:self.show_error(error)
 
     def _input_changed(self,*args) -> None:
         if self._building:return
@@ -299,16 +318,28 @@ class BMIWindow(ctk.CTk):
 
     def refresh_summary(self) -> None:
         try:
-            summary=self.controller.summary()
+            all_data=self.controller.analytics.snapshot(self.controller.profile_id)
+            stats=all_data.statistics
+            from .controller import Summary
+            summary=Summary(stats.latest,stats.count,stats.weight_change_from_first,all_data.records[0].weight_kg if all_data.records else None)
             self.summary_values[0].configure(text=f'{summary.latest.weight_kg:g} kg' if summary.latest else '—')
             self.summary_details[0].configure(text=display_time(summary.latest.measured_at) if summary.latest else 'No saved measurements')
             self.summary_values[1].configure(text=str(summary.count))
             self.summary_details[1].configure(text='Total measurements')
             self.summary_values[2].configure(text=f'{summary.weight_change:+.1f} kg' if summary.weight_change is not None else '—',text_color=TEAL)
             self.summary_details[2].configure(text=f'From first: {summary.first_weight:g} kg' if summary.weight_change is not None else 'Save two measurements')
-            points=self.controller.trend_points()
-            self.trend_note.configure(text=f'{len(points)} saved measurement'+('s' if len(points)!=1 else '')+' for the selected profile.\nChart rendering is planned for Task 06.\nOpen History to inspect your actual measurements.' if points else 'No measurements to preview yet.\nSave a result to start your history.\nChart rendering is planned for Task 06.')
-        except (ValidationError,DatabaseError) as error:self.show_error(error)
+            preview=prepare_history(all_data.records,self.controller.profile_id,self.preview_period,all_data.end)
+            self.preview_chart.update_data(preview)
+            latest=preview.statistics.latest
+            self.trend_note.configure(text=f'{len(preview.records)} records · Latest {latest.weight_kg:g} kg · UTC' if latest else 'No measurements in this period · UTC')
+            if self.trends_page is not None:self.trends_page.refresh(all_data)
+        except (ValidationError,DatabaseError) as error:
+            for value,detail in zip(self.summary_values,self.summary_details):
+                value.configure(text='—');detail.configure(text='History unavailable')
+            self.preview_chart.clear(prepare_history([],self.controller.profile_id))
+            self.trend_note.configure(text='History could not be loaded.')
+            if self.trends_page is not None:self.trends_page.refresh(prepare_history([],self.controller.profile_id))
+            self.show_error(error)
 
     def new_profile(self) -> None:
         dialog=ctk.CTkInputDialog(text='Profile name (up to 100 characters):',title='New Profile',fg_color=BG,button_fg_color=TEAL_DARK)
@@ -344,6 +375,15 @@ class BMIWindow(ctk.CTk):
 
     def navigate(self,page: str) -> None:
         self.active_page=page;self._highlight_nav()
+        if self.trends_page is not None:self.trends_page.grid_remove()
+        if page=='Trends':
+            self.calculator.grid_remove();self.other_page.grid_remove()
+            if self.trends_page is None:
+                self.trends_page=TrendsView(self.body,self.controller,self.select_trends_profile,self.show_error)
+            self.trends_page.grid(row=0,column=0,sticky='nsew')
+            self.trends_page.refresh()
+            self.viewport._parent_canvas.yview_moveto(0)
+            return
         if page=='Calculator':
             self.other_page.grid_remove();self.calculator.grid();return
         self.calculator.grid_remove()
@@ -364,7 +404,7 @@ class BMIWindow(ctk.CTk):
             elif page=='History':self._history_page(area)
             else:
                 label(area,f'{page} is planned for a later task.',24,bold=True).pack(pady=(65,15))
-                label(area,'Your profiles and measurements are available in Calculator and History.\nNo chart, dashboard or report is generated in Task 05.',16,MUTED,justify='center').pack(pady=10)
+                label(area,'Your profiles and measurements are available in Calculator and History.\nDashboard and reporting remain planned features.',16,MUTED,justify='center').pack(pady=10)
                 button(area,'Back to Calculator',lambda:self.navigate('Calculator')).pack(pady=25)
         except (ValidationError,DatabaseError) as error:self.show_error(error)
 

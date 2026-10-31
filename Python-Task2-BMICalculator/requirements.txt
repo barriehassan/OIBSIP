@@ -1,5 +1,6 @@
 # Desktop runtime; sqlite3 and tkinter ship with standard Python installers.
 customtkinter==6.0.0
 Pillow>=10.4,<13
+matplotlib>=3.10,<3.11
 # Test tooling (kept here to retain a single dependency configuration).
 pytest>=8,<10
