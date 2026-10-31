@@ -103,3 +103,40 @@ def test_lab_lifecycle_and_generator_isolation(monkeypatch):
         assert not errors
     finally:
         app._on_close()
+
+
+def test_native_lab_typing_navigation_and_close_cleanup(monkeypatch):
+    from app.ui.window import PasswordForgeApp
+    import app.ui.window as window
+    app=PasswordForgeApp()
+    errors=[]
+    app.report_callback_exception=lambda *error:errors.append(error[0].__name__)
+    real_destroy=app.destroy
+    try:
+        app.update()
+        if app.winfo_screenwidth() >= 1080 and app.winfo_screenheight() >= 768:
+            assert app.winfo_width() <= app.winfo_screenwidth()
+            assert app.winfo_height() + 44 <= app.winfo_screenheight()
+        monkeypatch.setattr(window.messagebox,'showinfo',lambda *args,**kwargs:None)
+        for nav in ('History','Settings','About','Generate'):
+            app._navigate(nav)
+            app.update()
+        app._navigate('Password Lab')
+        app.lab.entry.insert(0,'password')  # actual native edit, not StringVar.set
+        app.after(250,app.quit)
+        app.mainloop()
+        assert app.lab.assessment.rating == 'Very weak'
+        app._navigate('Settings')
+        assert app.lab.value.get() == ''
+        app._navigate('Password Lab')
+        app.lab.entry.insert(0,'DisposableClosingInput')
+        def checked_destroy():
+            assert app.lab.value.get() == ''
+            assert app.lab.pending is None
+            assert app.actions == []
+            assert app.controller.current_password == ''
+            real_destroy()
+        monkeypatch.setattr(app,'destroy',checked_destroy)
+        assert not errors
+    finally:
+        app._on_close()

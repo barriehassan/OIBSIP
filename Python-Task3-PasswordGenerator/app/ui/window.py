@@ -19,7 +19,10 @@ class PasswordForgeApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title('NOMOLI FORGE | Password Forge')
-        self.geometry('1280x800')
+        # Leave room for the Windows title bar and taskbar on laptop displays.
+        width = min(1280, max(1000, self.winfo_screenwidth() - 80))
+        height = min(800, max(680, self.winfo_screenheight() - 100))
+        self.geometry(f'{width}x{height}')
         self.minsize(1000, 680)
         self.configure(bg='#13264F')
         families = {name.lower() for name in font.families(self)}
@@ -96,6 +99,8 @@ class PasswordForgeApp(tk.Tk):
         self.canvas.create_polygon((x+.58*size)*self.sx,y*self.sy,(x+.71*size)*self.sx,(y+.66*size)*self.sy,(x+size)*self.sx,(y+.85*size)*self.sy,fill='#8C85FF',outline='')
 
     def _draw(self, width=None, height=None):
+        if self._pending:
+            self.after_cancel(self._pending)
         self._pending=None
         width=width or self.canvas.winfo_width()
         height=height or self.canvas.winfo_height()
@@ -294,7 +299,7 @@ class PasswordForgeApp(tk.Tk):
     def _copy_history_item(self,password):
         self._status(copy_to_clipboard(password,self).message)
 
-    def _status(self,message,**kwargs):
+    def _status(self,message):
         self.status_var.set(message)
         self._draw()
 
@@ -359,5 +364,6 @@ class PasswordForgeApp(tk.Tk):
         self.lab.leave()
         self.password_var.set('')
         self.controller.close()
+        self.actions.clear()  # Release copy callbacks holding temporary history values.
         if self._pending:self.after_cancel(self._pending)
         self.destroy()

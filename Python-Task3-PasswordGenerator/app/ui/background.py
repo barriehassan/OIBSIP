@@ -1,4 +1,4 @@
-"""Pastel mountain header artwork, using a local user image when available."""
+"""Local mountain artwork with a procedural fallback when unavailable."""
 
 from __future__ import annotations
 from pathlib import Path

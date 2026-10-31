@@ -1,9 +1,40 @@
+# Python environments and build output
+.venv/
+.venv-*/
+venv/
+env/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.venv/
-venv/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local secrets, credentials and private exports
 .env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+passwords.txt
+passwords.csv
+passwords.json
+password_history*
+
+# Logs, editor backups and local machine files
 *.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
