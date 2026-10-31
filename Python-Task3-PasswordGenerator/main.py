@@ -15,8 +15,8 @@ def main() -> None:
     except TclError as exc:
         raise SystemExit(
             "Could not initialize the desktop interface. Use a local graphical "
-            "session and a Python/Tk installation compatible with CustomTkinter "
-            "(Tk 8.6 recommended). CLI alternative: python -m app.cli"
+            "session and a working Python/Tk installation "
+            "(Tk 8.6 or 9). CLI alternative: python -m app.cli"
         ) from exc
     app.mainloop()
 

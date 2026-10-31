@@ -1,430 +1,338 @@
-"""CustomTkinter user interface for Password Forge.
-
-Password generation lives in independent core modules. The GUI never writes
-passwords to a file or network service.
-"""
+"""Mountain-glass desktop UI. Standard Tk widgets support both Tk 8.6 and Tk 9."""
 from __future__ import annotations
-
 import tkinter as tk
-
-import customtkinter as ctk
-
-from app.core.password_generator import PasswordOptions
-from app.core.validator import DEFAULT_LENGTH, MAX_LENGTH, MIN_LENGTH, PasswordValidationError
+from tkinter import messagebox, font
+from PIL import ImageTk
+from app.core.password_generator import PasswordOptions, CHARACTER_SETS
+from app.core.validator import DEFAULT_LENGTH, MIN_LENGTH, MAX_LENGTH, PasswordValidationError
 from app.services.clipboard import copy_to_clipboard
-from app.ui.background import build_background
 from app.ui.controller import PasswordController
+from app.ui.glass import render_glass, WIDTH, HEIGHT
 
-ctk.set_appearance_mode("light")
-ctk.set_default_color_theme("blue")
-
-INK = "#273659"
-MUTED = "#63718F"
-PURPLE = "#6555CB"
-PURPLE_HOVER = "#5140AD"
-BLUE = "#467ACB"
-PANEL = "#FFFFFF"
-BACKDROP = "#F3F2FB"
-LINE = "#E4E5F2"
-GREEN = "#309D7E"
+WHITE = '#F4F7FF'
+MUTED = '#C0D1F1'
+GREEN = '#3CE9B0'
 
 
-class PasswordForgeApp(ctk.CTk):
-    """Desktop view with accessible controls and ephemeral password history."""
-
-    def __init__(self) -> None:
+class PasswordForgeApp(tk.Tk):
+    def __init__(self):
         super().__init__()
-        self.title("NOMOLI FORGE | Password Forge")
-        self.geometry("1080x800")
-        self.minsize(820, 620)
-        self.configure(fg_color=BACKDROP)
-
-        self.controller = PasswordController(max_history=5)
+        self.title('NOMOLI FORGE | Password Forge')
+        self.geometry('1280x800')
+        self.minsize(1000, 680)
+        self.configure(bg='#13264F')
+        families = {name.lower() for name in font.families(self)}
+        self.ui_font = 'Segoe UI' if 'segoe ui' in families else 'Helvetica'
+        self.mono_font = 'Consolas' if 'consolas' in families else 'Courier'
+        self.controller = PasswordController()
         self.length_var = tk.IntVar(value=DEFAULT_LENGTH)
         self.numeric_length_var = tk.StringVar(value=str(DEFAULT_LENGTH))
-        self.uppercase_var = tk.BooleanVar(value=True)
-        self.lowercase_var = tk.BooleanVar(value=True)
-        self.digits_var = tk.BooleanVar(value=True)
-        self.symbols_var = tk.BooleanVar(value=True)
-        self.exclude_var = tk.BooleanVar(value=True)
+        self.password_var = tk.StringVar()
+        for name in ('uppercase', 'lowercase', 'digits', 'symbols', 'exclude'):
+            setattr(self, name + '_var', tk.BooleanVar(value=True))
         self.auto_copy_var = tk.BooleanVar(value=False)
         self.show_password_var = tk.BooleanVar(value=False)
         self.show_history_var = tk.BooleanVar(value=False)
-        self.password_var = tk.StringVar()
-        self.status_var = tk.StringVar(value="Choose your settings and select Generate Password.")
-        self.strength_var = tk.StringVar(value="Not generated")
+        self.status_var = tk.StringVar(value='Choose your settings, then forge your first password.')
+        self.strength = None
+        self.last_options = None
+        self.nav = 'Generate'
+        self._size = (0, 0)
+        self._pending = None
+        self._focus = -1
+        self.actions = []
+        self.canvas = tk.Canvas(self, bg='#13264F', highlightthickness=0, takefocus=True)
+        self.canvas.pack(fill='both', expand=True)
+        self.password_entry = tk.Entry(self.canvas, textvariable=self.password_var,
+            readonlybackground='#DDE8FF', fg='#102454', relief='flat', bd=0,
+            insertbackground='#102454', state='readonly', show='*', exportselection=False)
+        self.length_entry = tk.Entry(self.canvas, textvariable=self.numeric_length_var,
+            bg='#284479', fg=WHITE, insertbackground=WHITE, justify='center', relief='flat', bd=0)
+        self.length_entry.bind('<Return>', self._on_length_entry)
+        self.length_entry.bind('<FocusOut>', self._on_length_entry)
+        self.canvas.bind('<Configure>', self._resize)
+        self.canvas.bind('<Button-1>', self._click)
+        self.canvas.bind('<B1-Motion>', self._drag)
+        self.canvas.bind('<Motion>', self._hover)
+        self.canvas.bind('<Tab>', self._tab)
+        self.canvas.bind('<Shift-Tab>', lambda event: self._tab(event, -1))
+        self.canvas.bind('<ISO_Left_Tab>', lambda event: self._tab(event, -1))
+        self.canvas.bind('<Return>', self._activate)
+        self.canvas.bind('<space>', self._activate)
+        self.bind('<Control-g>', lambda event: self._generate())
+        self.bind('<Escape>', lambda event: self._hide())
+        self.protocol('WM_DELETE_WINDOW', self._on_close)
 
-        self._build()
-        self._update_length_caption()
-        self.protocol("WM_DELETE_WINDOW", self._on_close)
-        self.bind("<Configure>", self._on_window_resize)
+    def _resize(self, event):
+        if self._pending:
+            self.after_cancel(self._pending)
+        self._pending = self.after(100, lambda: self._draw(event.width, event.height))
 
-    def _card(self, parent, **kwargs):
-        return ctk.CTkFrame(
-            parent, fg_color=PANEL, corner_radius=20, border_width=1,
-            border_color=LINE, **kwargs
-        )
+    def _text(self, x, y, value, size=14, color=WHITE, bold=False, anchor='nw', width=0):
+        # Negative pixel sizes avoid Tk 9's point-size parsing differences.
+        return self.canvas.create_text(x*self.sx, y*self.sy, text=value,
+            fill=color, font=(self.ui_font, -max(10, round(size*self.scale)), 'bold' if bold else 'normal'),
+            anchor=anchor, width=width*self.sx if width else 0)
 
-    def _build(self) -> None:
-        container = ctk.CTkScrollableFrame(
-            self, fg_color="transparent", corner_radius=0,
-            scrollbar_button_color="#CFCEE8",
-        )
-        container.pack(fill="both", expand=True, padx=16, pady=10)
-        container.grid_columnconfigure(0, weight=1)
+    def _rect(self, box, fill, outline='', radius=12):
+        x1,y1,x2,y2=box
+        points=[x1+radius,y1,x2-radius,y1,x2,y1,x2,y1+radius,x2,y2-radius,
+                x2,y2,x2-radius,y2,x1+radius,y2,x1,y2,x1,y2-radius,x1,y1+radius,x1,y1]
+        return self.canvas.create_polygon(*[v*(self.sx if i%2==0 else self.sy) for i,v in enumerate(points)],
+            smooth=True, fill=fill, outline=outline, width=1)
 
-        self._build_header(container)
-        body = ctk.CTkFrame(container, fg_color="transparent")
-        body.grid(row=1, column=0, sticky="nsew", padx=14, pady=(16, 4))
-        body.grid_columnconfigure(0, weight=2, uniform="body")
-        body.grid_columnconfigure(1, weight=3, uniform="body")
-        self._build_settings(body)
-        right = ctk.CTkFrame(body, fg_color="transparent")
-        right.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-        right.grid_columnconfigure(0, weight=1)
-        self._build_output(right)
-        self._build_history(right)
+    def _button(self, box, text, command, primary=False, subtle=False):
+        self._rect(box, '#3760F4' if primary else ('#203D71' if subtle else '#DCE7FF'),
+                   '#98B8FF' if primary else '#6383BB')
+        x1,y1,x2,y2=box
+        self._text((x1+x2)/2,(y1+y2)/2,text,14,WHITE if primary or subtle else '#183268',True,'center')
+        self.actions.append((box,command,text))
 
-        ctk.CTkLabel(
-            container, text="NOMOLI FORGE  •  Creative tools, thoughtfully engineered",
-            text_color=MUTED, font=ctk.CTkFont(size=12)
-        ).grid(row=2, column=0, pady=(13, 10))
+    def _mountain(self, x, y, size):
+        pts=[(0,.85),(.28,.28),(.4,.5),(.58,0),(1,.85),(.71,.66),(.57,.3),(.4,.72),(.29,.55)]
+        self.canvas.create_polygon(*[v for px,py in pts for v in ((x+px*size)*self.sx,(y+py*size)*self.sy)], fill='#B8EEFF', outline='#E6F8FF')
+        self.canvas.create_polygon((x+.58*size)*self.sx,y*self.sy,(x+.71*size)*self.sx,(y+.66*size)*self.sy,(x+size)*self.sx,(y+.85*size)*self.sy,fill='#8C85FF',outline='')
 
-    def _build_header(self, container) -> None:
-        from customtkinter import CTkImage
-
-        header = self._card(container)
-        header.grid(row=0, column=0, sticky="ew", padx=14, pady=(9, 0))
-        header.grid_columnconfigure(0, weight=1)
-        self._header_width = 880
-        self._header_image = CTkImage(
-            light_image=build_background(1120, 210),
-            dark_image=build_background(1120, 210),
-            size=(self._header_width, 190),
-        )
-        self._header_label = ctk.CTkLabel(header, image=self._header_image, text="", height=190)
-        self._header_label.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
-        title_group = ctk.CTkFrame(header, fg_color="#F8F7FC", corner_radius=15)
-        title_group.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 16))
-        ctk.CTkLabel(
-            title_group, text="NOMOLI FORGE  /  SECURITY TOOLS",
-            text_color=PURPLE, font=ctk.CTkFont(size=12, weight="bold")
-        ).pack(pady=(11, 2))
-        ctk.CTkLabel(
-            title_group, text="Password Forge",
-            text_color=INK, font=ctk.CTkFont(size=30, weight="bold")
-        ).pack(pady=(0, 1))
-        ctk.CTkLabel(
-            title_group, text="Every Password, Uniquely Forged.",
-            text_color=MUTED, font=ctk.CTkFont(size=14)
-        ).pack(pady=(0, 12))
-
-    def _section_heading(self, parent, title: str, subtitle: str) -> None:
-        ctk.CTkLabel(
-            parent, text=title, anchor="w", text_color=INK,
-            font=ctk.CTkFont(size=21, weight="bold")
-        ).pack(fill="x", padx=22, pady=(20, 1))
-        ctk.CTkLabel(
-            parent, text=subtitle, anchor="w", text_color=MUTED,
-            wraplength=300, justify="left", font=ctk.CTkFont(size=12)
-        ).pack(fill="x", padx=22, pady=(0, 16))
-
-    def _build_settings(self, parent) -> None:
-        card = self._card(parent)
-        card.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        self._section_heading(card, "Forge settings", "Control the length and character types.")
-
-        ctk.CTkLabel(
-            card, text="PASSWORD LENGTH", anchor="w",
-            text_color=INK, font=ctk.CTkFont(size=12, weight="bold")
-        ).pack(fill="x", padx=22)
-        length_row = ctk.CTkFrame(card, fg_color="transparent")
-        length_row.pack(fill="x", padx=20, pady=(8, 9))
-        length_row.grid_columnconfigure(0, weight=1)
-        self.length_slider = ctk.CTkSlider(
-            length_row, from_=MIN_LENGTH, to=MAX_LENGTH,
-            number_of_steps=MAX_LENGTH - MIN_LENGTH, progress_color=PURPLE,
-            button_color=PURPLE, button_hover_color=PURPLE_HOVER,
-            command=self._on_slider, height=20
-        )
-        self.length_slider.grid(row=0, column=0, sticky="ew", padx=(0, 10))
-        self.length_slider.set(DEFAULT_LENGTH)
-        self.length_entry = ctk.CTkEntry(
-            length_row, textvariable=self.numeric_length_var,
-            width=58, height=36, corner_radius=10, justify="center",
-            fg_color="#F7F7FD", text_color=INK, border_color=LINE
-        )
-        self.length_entry.grid(row=0, column=1)
-        self.length_entry.bind("<Return>", self._on_length_entry)
-        self.length_entry.bind("<FocusOut>", self._on_length_entry)
-        self.length_hint = ctk.CTkLabel(
-            card, text="", anchor="w", text_color=MUTED,
-            font=ctk.CTkFont(size=12)
-        )
-        self.length_hint.pack(fill="x", padx=22, pady=(0, 18))
-
-        ctk.CTkLabel(
-            card, text="INCLUDE CHARACTERS", anchor="w", text_color=INK,
-            font=ctk.CTkFont(size=12, weight="bold")
-        ).pack(fill="x", padx=22, pady=(0, 8))
-        for label, var, example in (
-            ("Uppercase letters", self.uppercase_var, "A–Z"),
-            ("Lowercase letters", self.lowercase_var, "a–z"),
-            ("Numbers", self.digits_var, "0–9"),
-            ("Symbols", self.symbols_var, "! @ # $"),
-        ):
-            line = ctk.CTkFrame(card, fg_color="transparent")
-            line.pack(fill="x", padx=22, pady=5)
-            ctk.CTkCheckBox(
-                line, text=label, variable=var, width=190,
-                text_color=INK, fg_color=PURPLE, hover_color=PURPLE_HOVER,
-                checkmark_color="white", font=ctk.CTkFont(size=13)
-            ).pack(side="left")
-            ctk.CTkLabel(
-                line, text=example, text_color=MUTED,
-                font=ctk.CTkFont(size=12)
-            ).pack(side="right")
-
-        ctk.CTkFrame(card, height=1, fg_color=LINE).pack(fill="x", padx=22, pady=(14, 10))
-        self._toggle_row(card, "Exclude lookalike characters", self.exclude_var, "0, O, o, 1, l, I")
-        self._toggle_row(card, "Automatically copy generated password", self.auto_copy_var, "Can be turned off for privacy")
-        ctk.CTkLabel(
-            card, text="At least two character categories are required.",
-            text_color=MUTED, font=ctk.CTkFont(size=11)
-        ).pack(anchor="w", padx=22, pady=(15, 24))
-
-    def _toggle_row(self, parent, title, variable, subtitle):
-        row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", padx=22, pady=(5, 8))
-        row.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(
-            row, text=title, anchor="w", text_color=INK,
-            wraplength=230, justify="left", font=ctk.CTkFont(size=12)
-        ).grid(row=0, column=0, sticky="ew")
-        ctk.CTkSwitch(
-            row, text="", variable=variable, width=38,
-            progress_color=PURPLE, button_color="white"
-        ).grid(row=0, column=1, rowspan=2, sticky="e")
-        ctk.CTkLabel(
-            row, text=subtitle, text_color=MUTED,
-            anchor="w", font=ctk.CTkFont(size=10)
-        ).grid(row=1, column=0, sticky="ew")
-
-    def _build_output(self, parent) -> None:
-        card = self._card(parent)
-        card.grid(row=0, column=0, sticky="ew")
-        self._section_heading(card, "Your password", "Create something unique and hard to guess.")
-        output = ctk.CTkFrame(card, fg_color="#F7F6FD", corner_radius=15)
-        output.pack(fill="x", padx=22, pady=(2, 10))
-        output.grid_columnconfigure(0, weight=1)
-        self.password_entry = ctk.CTkEntry(
-            output, textvariable=self.password_var,
-            show="•", border_width=0, fg_color="transparent",
-            text_color=INK, font=ctk.CTkFont(size=18, family="Consolas"),
-            height=58, corner_radius=0
-        )
-        self.password_entry.grid(row=0, column=0, sticky="ew", padx=(13, 3), pady=5)
-        self.password_entry.configure(state="readonly")
-        self.toggle_button = ctk.CTkButton(
-            output, text="Show", width=63, height=34, corner_radius=10,
-            fg_color="#E8E6FA", hover_color="#DCD8F8", text_color=PURPLE,
-            command=self._toggle_visibility
-        )
-        self.toggle_button.grid(row=0, column=1, padx=(2, 12))
-
-        strength_box = ctk.CTkFrame(card, fg_color="transparent")
-        strength_box.pack(fill="x", padx=22, pady=(6, 8))
-        ctk.CTkLabel(
-            strength_box, text="Estimated strength", text_color=INK,
-            font=ctk.CTkFont(size=12)
-        ).pack(side="left")
-        self.strength_label = ctk.CTkLabel(
-            strength_box, textvariable=self.strength_var,
-            text_color=MUTED, font=ctk.CTkFont(size=12, weight="bold")
-        )
-        self.strength_label.pack(side="right")
-        self.strength_bar = ctk.CTkProgressBar(
-            card, progress_color=PURPLE, fg_color="#E8E6F3", height=9
-        )
-        self.strength_bar.pack(fill="x", padx=22, pady=(0, 18))
-        self.strength_bar.set(0)
-
-        buttons = ctk.CTkFrame(card, fg_color="transparent")
-        buttons.pack(fill="x", padx=22, pady=(0, 12))
-        buttons.grid_columnconfigure(0, weight=1)
-        buttons.grid_columnconfigure(1, weight=1)
-        ctk.CTkButton(
-            buttons, text="Generate Password", height=45, corner_radius=13,
-            fg_color=PURPLE, hover_color=PURPLE_HOVER,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            command=self._generate
-        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        ctk.CTkButton(
-            buttons, text="Copy Password", height=45, corner_radius=13,
-            fg_color=BLUE, hover_color="#3266AD",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            command=self._copy
-        ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
-        ctk.CTkLabel(
-            card, textvariable=self.status_var, anchor="w", wraplength=460,
-            justify="left", text_color=MUTED, font=ctk.CTkFont(size=12)
-        ).pack(fill="x", padx=22, pady=(0, 22))
-
-    def _build_history(self, parent) -> None:
-        card = self._card(parent)
-        card.grid(row=1, column=0, sticky="ew", pady=(15, 0))
-        top = ctk.CTkFrame(card, fg_color="transparent")
-        top.pack(fill="x", padx=22, pady=(16, 4))
-        top.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(
-            top, text="Recent creations", text_color=INK,
-            font=ctk.CTkFont(size=19, weight="bold")
-        ).grid(row=0, column=0, sticky="w")
-        ctk.CTkButton(
-            top, text="Clear history", width=110, height=30,
-            corner_radius=9, fg_color="#F1F0FB", hover_color="#E4E0F8",
-            text_color=PURPLE, command=self._clear_history
-        ).grid(row=0, column=1, sticky="e")
-        ctk.CTkLabel(
-            card, text="Last five passwords; stored only until this app closes.",
-            anchor="w", text_color=MUTED, font=ctk.CTkFont(size=12)
-        ).pack(fill="x", padx=22, pady=(0, 8))
-        reveal_line = ctk.CTkFrame(card, fg_color="transparent")
-        reveal_line.pack(fill="x", padx=22)
-        ctk.CTkSwitch(
-            reveal_line, text="Reveal history", variable=self.show_history_var,
-            command=self._render_history, progress_color=PURPLE,
-            text_color=INK, font=ctk.CTkFont(size=12)
-        ).pack(side="right")
-        self.history_frame = ctk.CTkFrame(card, fg_color="transparent")
-        self.history_frame.pack(fill="x", padx=22, pady=(8, 15))
-        self._render_history()
-
-    def _on_window_resize(self, event) -> None:
-        if event.widget is not self:
+    def _draw(self, width=None, height=None):
+        self._pending=None
+        width=width or self.canvas.winfo_width()
+        height=height or self.canvas.winfo_height()
+        if width < 10 or height < 10:
             return
-        width = max(670, min(1020, event.width - 115))
-        if abs(width - self._header_width) >= 8:
-            self._header_width = width
-            self._header_image.configure(size=(width, 190))
+        self.sx,self.sy=width/WIDTH,height/HEIGHT
+        self.scale=min(self.sx,self.sy)
+        if (width,height)!=self._size:
+            self._image=ImageTk.PhotoImage(render_glass(width,height), master=self)
+            self._size=(width,height)
+        for item in self.canvas.find_all():
+            if self.canvas.type(item) != 'window':
+                self.canvas.delete(item)
+        self.canvas.create_image(0,0,image=self._image,anchor='nw')
+        self.actions=[]
+        self._mountain(82,48,88)
+        self._text(128,150,'NOMOLI FORGE',19,bold=True,anchor='center')
+        self._text(128,178,'Password Forge',15,anchor='center')
+        self._text(128,217,'Every Password,\nUniquely Forged.',12,MUTED,anchor='center')
+        for i,(name,label) in enumerate((('Generate','＋  Generate'),('History','◷  History'),('Settings','⚙  Settings'),('About','ⓘ  About'))):
+            self._button((34,282+i*64,222,332+i*64),label,lambda n=name:self._navigate(n),primary=self.nav==name,subtle=self.nav!=name)
+        self._check((34,655,224,684),self.auto_copy_var,'Auto copy')
+        self._text(42,696,'Ctrl+G  Generate\nEsc  Hide passwords',11,MUTED)
+        self._text(42,768,'PRIVATE BY DESIGN',11,GREEN,True)
+        self._text(42,796,'Offline generation.\nNo accounts. No cloud.',12,MUTED,width=170)
+        self._text(270,39,'NOMOLI FORGE',38,bold=True)
+        self._text(272,88,'Password Forge',27)
+        self._text(274,130,'Every Password, Uniquely Forged.',17,MUTED)
+        self._text(1400,58,'●  LOCAL & PRIVATE',12,GREEN,True,'ne')
+        self._text(1400,87,'A stronger start to your digital life.',13,WHITE,False,'ne')
+        self._text(290,222,'Generated password',22,bold=True)
+        self._rect((290,268,976,344),'#DDE8FF','#D4E5FF')
+        self.password_entry.configure(font=(self.mono_font,-max(16,round(27*self.scale))),show='' if self.show_password_var.get() else '*')
+        self._embed(self.password_entry,306,286,440,40)
+        self._button((757,280,822,332),'Hide' if self.show_password_var.get() else 'Show',self._toggle_visibility)
+        self._button((834,280,895,332),'Copy',self._copy)
+        self._button((907,280,964,332),'New',self._generate)
+        progress=self.strength.progress if self.strength else 0
+        self._rect((294,359,876,368),'#6580B5',radius=4)
+        color=GREEN if self.strength and self.strength.label=='Strong' else '#6CCBFF'
+        if progress:
+            self._rect((294,359,294+582*progress,368),color,radius=4)
+        self._text(970,353,self.strength.label if self.strength else 'Ready',14,color,True,'ne')
+        self._button((290,388,699,433),'✦  Generate Password',self._generate,primary=True)
+        self._button((713,388,976,433),'Copy to Clipboard',self._copy)
+        self._draw_strength()
+        self._draw_settings()
+        self._draw_history()
+        self._text(288,851,self.status_var.get(),13,MUTED,width=1100)
+        self._draw_focus()
 
-    def _on_slider(self, value) -> None:
-        value = int(round(float(value)))
-        self.length_var.set(value)
-        self.numeric_length_var.set(str(value))
-        self._update_length_caption()
+    def _embed(self, entry, x, y, width, height):
+        if not hasattr(entry, '_canvas_item'):
+            entry._canvas_item=self.canvas.create_window(0,0,window=entry,anchor='nw')
+        self.canvas.coords(entry._canvas_item,x*self.sx,y*self.sy)
+        self.canvas.itemconfigure(entry._canvas_item,width=width*self.sx,height=height*self.sy)
+        self.canvas.tag_raise(entry._canvas_item)
 
-    def _update_length_caption(self) -> None:
-        self.length_hint.configure(text=f"{self.length_var.get()} characters  •  Range: 8–64")
+    def _draw_strength(self):
+        self._text(1042,222,'Password strength',21,bold=True)
+        x1,y1,x2,y2=1044,281,1193,430
+        self.canvas.create_oval(x1*self.sx,y1*self.sy,x2*self.sx,y2*self.sy,outline='#496797',width=13*self.scale)
+        progress=self.strength.progress if self.strength else 0
+        if progress:
+            self.canvas.create_arc(x1*self.sx,y1*self.sy,x2*self.sx,y2*self.sy,start=90,extent=-359*progress,style='arc',outline=GREEN,width=13*self.scale)
+        self._text(1118,349,self.strength.label if self.strength else 'Ready',20,GREEN,True,'center')
+        self._text(1118,376,'estimated',11,MUTED,False,'center')
+        options=self.last_options
+        checks=[('Length '+str(options.length) if options else 'Length —',bool(options))]
+        for key,label in [('uppercase','Uppercase'),('lowercase','Lowercase'),('digits','Numbers'),('symbols','Symbols')]:
+            checks.append((label,bool(options and getattr(options,key))))
+        for i,(label,enabled) in enumerate(checks):
+            self._text(1220,278+29*i,('✓  ' if enabled else '–  ')+label,13,GREEN if enabled else MUTED)
 
-    def _on_length_entry(self, _event=None) -> None:
+    def _draw_settings(self):
+        self._text(290,496,'Password settings',21,bold=True)
+        self._text(290,539,'Password length',14,bold=True)
+        self._text(754,541,'8 to 64 characters',12,MUTED,anchor='ne')
+        self._rect((292,590,677,597),'#7290C6',radius=3)
+        value=(self.length_var.get()-MIN_LENGTH)/(MAX_LENGTH-MIN_LENGTH)
+        pos=292+385*value
+        self._rect((292,590,max(295,pos),597),'#48BAFF',radius=3)
+        self.canvas.create_oval((pos-9)*self.sx,584*self.sy,(pos+9)*self.sx,603*self.sy,fill='#4986FF',outline='#A6CEFF')
+        self.length_entry.configure(font=(self.ui_font,-max(13,round(17*self.scale))))
+        self._embed(self.length_entry,698,572,64,40)
+        for i,(name,label) in enumerate([('uppercase','Uppercase letters (A–Z)'),('lowercase','Lowercase letters (a–z)'),('digits','Numbers (0–9)'),('symbols','Symbols (! @ # $ %)')]):
+            self._check((292,625+i*33,760,653+i*33),getattr(self,name+'_var'),label)
+        self._check((292,757,760,785),self.exclude_var,'Exclude lookalikes (0 O o 1 l I)')
+
+    def _check(self, box, variable, label):
+        x,y,_,_=box
+        on=variable.get()
+        self._rect((x,y,x+23,y+23),'#3C76F5' if on else '#203D71','#95B7ED',5)
+        if on:self._text(x+11,y+10,'✓',18,WHITE,True,'center')
+        self._text(x+35,y+2,label,14)
+        self.actions.append((box,lambda:self._toggle(variable),label))
+
+    def _draw_history(self):
+        self._text(832,496,'Recent passwords',21,bold=True)
+        self._button((1285,490,1396,528),'Clear all',self._clear_history,subtle=True)
+        self._text(834,535,'LAST FIVE · MEMORY ONLY',10,MUTED,True)
+        self._button((1150,530,1269,556),'Hide history' if self.show_history_var.get() else 'Reveal history',lambda:self._toggle(self.show_history_var),subtle=True)
+        if not self.controller.history:
+            self._text(1114,642,'Your next creation starts here.',18,anchor='center')
+            self._text(1114,675,'Generate a password to begin your private history.',12,MUTED,anchor='center')
+        for i,password in enumerate(self.controller.history):
+            y=566+i*45
+            self._rect((832,y,1396,y+38),'#284577','#6585B7')
+            self._text(848,y+11,f'{i+1:02}',11,MUTED)
+            text=password if self.show_history_var.get() else '*'*min(24,len(password))
+            # Bound the rendered value; copying always uses the complete password.
+            if len(text)>36:text=text[:33]+'…'
+            self._text(886,y+8,text,15)
+            self._button((1334,y+3,1390,y+35),'Copy',lambda p=password:self._copy_history_item(p),subtle=True)
+
+    def _navigate(self, name):
+        if name=='About':
+            messagebox.showinfo('About Password Forge','NOMOLI FORGE · Password Forge\nEvery Password, Uniquely Forged.\n\nSecure local generation using Python secrets.\nHistory stays in memory. Clipboard contents can persist.\nStrength is an estimate, not a breach check.',parent=self)
+            return
+        self.nav=name
+        self._draw()
+        if name=='Settings':self.length_entry.focus_set()
+        elif name=='History':self._status('Recent passwords stay in memory. Use Reveal history to inspect them.')
+
+    def _toggle(self, var):
+        var.set(not var.get())
+        self._draw()
+
+    def _on_length_entry(self, event=None):
         try:
-            number = int(self.numeric_length_var.get().strip())
-            if not MIN_LENGTH <= number <= MAX_LENGTH:
-                raise ValueError
+            number=int(self.numeric_length_var.get())
+            if not MIN_LENGTH<=number<=MAX_LENGTH:raise ValueError
         except ValueError:
             self.numeric_length_var.set(str(self.length_var.get()))
-            self._status("Choose a whole number between 8 and 64.", error=True)
+            self._status('Choose a whole number from 8 to 64.')
             return
         self.length_var.set(number)
-        self.length_slider.set(number)
-        self._update_length_caption()
+        self._draw()
 
-    def _read_options(self) -> PasswordOptions:
-        # Commit the numeric edit before reading the options.
-        try:
-            length = int(self.numeric_length_var.get().strip())
-        except ValueError as exc:
-            raise PasswordValidationError("Enter a valid whole-number length.") from exc
-        return PasswordOptions(
-            length=length,
-            uppercase=self.uppercase_var.get(),
-            lowercase=self.lowercase_var.get(),
-            digits=self.digits_var.get(),
-            symbols=self.symbols_var.get(),
-            exclude_ambiguous=self.exclude_var.get(),
-        )
+    def _read_options(self):
+        try:length=int(self.numeric_length_var.get())
+        except ValueError as exc:raise PasswordValidationError('Enter a whole-number length.') from exc
+        return PasswordOptions(length=length,**{n:getattr(self,n+'_var').get() for n in CHARACTER_SETS},exclude_ambiguous=self.exclude_var.get())
 
-    def _generate(self) -> None:
+    def _generate(self):
         try:
-            options = self._read_options()
-            password, strength = self.controller.generate(options)
-        except (PasswordValidationError, ValueError) as exc:
-            self._status(str(exc), error=True)
+            options=self._read_options()
+            password,strength=self.controller.generate(options)
+        except (PasswordValidationError,ValueError) as exc:
+            self._status(str(exc))
             return
-        self.length_var.set(options.length)
-        self.length_slider.set(options.length)
-        self._update_length_caption()
-        self.password_entry.configure(state="normal")
         self.password_var.set(password)
-        self.password_entry.configure(state="readonly")
-        self.strength_var.set(strength.label)
-        self.strength_label.configure(text_color={"Weak":"#BE7049", "Medium":"#B08B29", "Strong":GREEN}[strength.label])
-        self.strength_bar.set(strength.progress)
-        self.strength_bar.configure(progress_color={"Weak":"#D88D70", "Medium":"#DBB75B", "Strong":GREEN}[strength.label])
-        self._render_history()
-        if self.auto_copy_var.get():
-            self._copy()
-        else:
-            self._status("Password created. Keep it private and store it safely.")
+        self.strength=strength
+        self.last_options=options
+        self.length_var.set(options.length)
+        self.show_password_var.set(False)
+        if self.auto_copy_var.get():self._copy()
+        else:self._status('Password forged locally. Copy it when you are ready.')
 
-    def _toggle_visibility(self) -> None:
-        visible = not self.show_password_var.get()
-        self.show_password_var.set(visible)
-        self.password_entry.configure(show="" if visible else "•")
-        self.toggle_button.configure(text="Hide" if visible else "Show")
+    def _toggle_visibility(self):
+        self._toggle(self.show_password_var)
 
-    def _copy(self) -> None:
-        password = self.controller.current_password
-        if not password:
-            self._status("Generate a password before copying.", error=True)
+    def _hide(self):
+        self.show_password_var.set(False)
+        self.show_history_var.set(False)
+        self._draw()
+
+    def _copy(self):
+        if not self.controller.current_password:
+            self._status('Generate a password before copying.')
             return
-        result = copy_to_clipboard(password, self)
-        self._status(result.message, error=not result.success)
+        self._copy_history_item(self.controller.current_password)
 
-    def _status(self, message: str, *, error: bool = False) -> None:
+    def _copy_history_item(self,password):
+        self._status(copy_to_clipboard(password,self).message)
+
+    def _status(self,message,**kwargs):
         self.status_var.set(message)
-        # The label is kept in muted text to reduce alarm for input errors.
+        self._draw()
 
-    def _render_history(self) -> None:
-        for child in self.history_frame.winfo_children():
-            child.destroy()
-        if not self.controller.history:
-            ctk.CTkLabel(
-                self.history_frame, text="No passwords generated yet.",
-                anchor="w", text_color=MUTED
-            ).pack(fill="x", pady=7)
-            return
-        reveal = self.show_history_var.get()
-        for index, password in enumerate(self.controller.history, start=1):
-            item = ctk.CTkFrame(self.history_frame, fg_color="#F8F7FD", corner_radius=10)
-            item.pack(fill="x", pady=3)
-            item.grid_columnconfigure(1, weight=1)
-            ctk.CTkLabel(
-                item, text=f"{index:02}", text_color=PURPLE,
-                font=ctk.CTkFont(size=12, weight="bold"), width=30
-            ).grid(row=0, column=0, padx=(9, 2), pady=9)
-            value = password if reveal else ("•" * min(len(password), 24))
-            ctk.CTkLabel(
-                item, text=value, text_color=INK, anchor="w",
-                font=ctk.CTkFont(size=12, family="Consolas")
-            ).grid(row=0, column=1, sticky="w", padx=3)
-            ctk.CTkButton(
-                item, text="Copy", width=52, height=28, corner_radius=8,
-                fg_color="#ECE9FC", hover_color="#DCD8F8", text_color=PURPLE,
-                command=lambda p=password: self._copy_history_item(p)
-            ).grid(row=0, column=2, padx=(4, 9))
-
-    def _copy_history_item(self, password: str) -> None:
-        result = copy_to_clipboard(password, self)
-        self._status(result.message, error=not result.success)
-
-    def _clear_history(self) -> None:
+    def _clear_history(self):
         self.controller.clear_history()
-        self._render_history()
-        self._status("Recent creations cleared from the app's memory.")
+        self._status('History cleared. Your current password remains available above.')
 
-    def _on_close(self) -> None:
-        self.password_var.set("")
+    def _slider(self,x):
+        length=round(MIN_LENGTH+(max(292,min(677,x))-292)/385*(MAX_LENGTH-MIN_LENGTH))
+        self.length_var.set(length)
+        self.numeric_length_var.set(str(length))
+        self._draw()
+
+    def _click(self,event):
+        x,y=event.x/self.sx,event.y/self.sy
+        self.canvas.focus_set()
+        self._dragging=282<=x<=688 and 575<=y<=612
+        if self._dragging:
+            self._slider(x)
+            return
+        for index,(box,command,_) in enumerate(self.actions):
+            x1,y1,x2,y2=box
+            if x1<=x<=x2 and y1<=y<=y2:
+                self._focus=index
+                command()
+                return
+
+    def _drag(self,event):
+        if getattr(self,'_dragging',False):self._slider(event.x/self.sx)
+
+    def _hover(self,event):
+        if not hasattr(self,'sx'):return
+        x,y=event.x/self.sx,event.y/self.sy
+        self.canvas.configure(cursor='hand2' if any(a<=x<=c and b<=y<=d for (a,b,c,d),_,_ in self.actions) else '')
+
+    def _tab(self,event,direction=1):
+        if self.actions:
+            next_focus=self._focus+direction
+            if next_focus>=len(self.actions):
+                self._focus=-1
+                self.length_entry.focus_set()
+            elif next_focus<0:
+                self._focus=len(self.actions)-1
+                self.password_entry.focus_set()
+            else:
+                self._focus=next_focus
+                self._draw_focus()
+        return 'break'
+
+    def _draw_focus(self):
+        self.canvas.delete('focus')
+        if 0<=self._focus<len(self.actions) and self.focus_get() is self.canvas:
+            box,_,label=self.actions[self._focus]
+            a,b,c,d=box
+            self.canvas.create_rectangle((a-3)*self.sx,(b-3)*self.sy,(c+3)*self.sx,(d+3)*self.sy,outline='#B8F4FF',width=2,tags='focus')
+
+    def _activate(self,event):
+        if 0<=self._focus<len(self.actions):self.actions[self._focus][1]()
+        return 'break'
+
+    def _on_close(self):
+        self.password_var.set('')
         self.controller.close()
+        if self._pending:self.after_cancel(self._pending)
         self.destroy()

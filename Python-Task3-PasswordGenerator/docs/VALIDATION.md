@@ -1,18 +1,13 @@
 # Validation record
 
-Checked on 31 October 2026 in a Linux cloud environment.
+Mountain-glass redesign checked on 31 October 2026 using Python 3.12.14 and Tk 9.0.4 in a Linux virtual display.
 
-| Check | Result |
-| --- | --- |
-| Full suite: Python 3.12.14, pytest 9.2.0 | 44 passed, 77 subtests passed |
-| Standard-library suite: Python 3.12.14, no desktop packages | 7 passed |
-| Desktop module import | Passed; Tk 9.0 detected |
-| Window rendering / interactive GUI | Not verified: no graphical display available |
-| Actual OS clipboard | Not verified; adapter failure and Tk fallback tested with substitutes |
-| Windows / macOS launch | Not run in this environment |
+- Headless suite: 46 passed, 77 subtests passed; the opt-in desktop test is skipped without its environment flag.
+- Full suite with desktop enabled: 47 passed, 77 subtests passed.
+- Real desktop smoke checks: rendering, repeated generation, five-entry history, masking, length 64, invalid input, slider synchronization, clipboard round-trip, 1440×900 and 1000×680 resize, clearing, and closing passed.
+- Actual application screenshot visually inspected. A redraw issue that hid the embedded fields was found and fixed; the regression test checks that both fields remain mapped.
+- Windows and macOS have not been tested in this environment. Complete the manual submission checklist on the target computer.
 
-Installed desktop versions for the automated run: CustomTkinter 5.2.2, Pillow 12.3.0, pyperclip 1.11.0. Requirements use bounded compatible ranges rather than claiming these versions were tested on every platform.
+Desktop dependencies are Pillow and pyperclip; Tk comes from the Python installation. CustomTkinter is no longer required. The CLI remains dependency-free.
 
-Coverage includes all 11 allowed category combinations at lengths 8, 18, and 64 with both lookalike settings (66 cases), invalid types and boundaries, mandatory categories, alphabet filtering, history order/capacity/cleanup, unchanged state after invalid generation, CLI flags/errors/help, strength labels, artwork fallback and simulated clipboard errors.
-
-Complete the manual checklist before describing the desktop application as verified on your own OS. No screenshots, demonstration videos, internship acceptance, or platform test results are fabricated.
+Run the full suite from the project directory with `python -m pytest -q`. Opt into the real-window test on a desktop by setting `RUN_DESKTOP_TESTS=1` before running pytest. The opt-in test does not change the system clipboard. Clipboard round-trip was checked separately using disposable generated data in the virtual display.

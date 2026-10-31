@@ -2,7 +2,7 @@
 
 **Every Password, Uniquely Forged.**
 
-An advanced password-generator project for the Oasis Infobyte Python Programming internship. Python powers an offline command-line tool and a pastel mountain-themed CustomTkinter desktop application. This is the first project added to the repository; the folder retains the working task number, Task 3.
+An advanced password-generator project for the Oasis Infobyte Python Programming internship. Python powers an offline command-line tool and a mountain-glass desktop application built with standard Tk and Pillow. This is the first project added to the repository; the folder retains the working task number, Task 3.
 
 ## Features
 
@@ -14,7 +14,7 @@ An advanced password-generator project for the Oasis Infobyte Python Programming
 - Informational strength indicator; password masking and explicit copy feedback
 - Optional automatic copy, off by default
 - Last five passwords in memory, hidden by default, with copy and clear controls
-- Original procedural mountain artwork included in code; no image download required
+- Your supplied mountain landscape bundled locally, with a procedural fallback
 - Dependency-free command-line mode
 
 ## Quick start: no installation needed
@@ -64,7 +64,7 @@ Installation needs internet once; generation works offline. Commands below assum
 
 ### Optional custom artwork
 
-The built-in artwork is drawn locally with Pillow. To replace it, add an image you have permission to publish at `assets/backgrounds/mountain.png` (also accepts `.jpg`, `.jpeg`, `.webp`). A missing or unreadable image falls back to the illustration.
+The supplied mountain landscape is included at `assets/backgrounds/mountain.png` and fills the entire window. Frosted blue panels blur and tint the scenery beneath them. To replace it, add an image you have permission to publish at `assets/backgrounds/mountain.png` (also accepts `.jpg`, `.jpeg`, `.webp`). A missing or unreadable image falls back to the illustration.
 
 ## Structure
 
@@ -114,4 +114,10 @@ The strength display uses `length × log2(alphabet size)`, an approximate upper 
 
 ## Credits and originality
 
-Prepared for Hassan Barrie under NOMOLI FORGE, with AI assistance. This project continues the independently developed Password Forge source, rather than copying a public tutorial solution. The mountain artwork is procedural code. Third-party dependencies: [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter), [Pillow](https://github.com/python-pillow/Pillow), [pyperclip](https://github.com/asweigart/pyperclip), and [pytest](https://github.com/pytest-dev/pytest). NOMOLI FORGE is used as a text wordmark; this project does not substitute a new logo for the separately selected brand identity.
+Prepared for Hassan Barrie under NOMOLI FORGE, with AI assistance. This project continues the independently developed Password Forge source, rather than copying a public tutorial solution. The background image was supplied by the author; procedural artwork remains available as a fallback. Third-party dependencies: [Pillow](https://github.com/python-pillow/Pillow), [pyperclip](https://github.com/asweigart/pyperclip), and [pytest](https://github.com/pytest-dev/pytest). NOMOLI FORGE uses a text wordmark and a simple mountain motif matching the supplied UI reference. The separately selected company brand identity remains a separate deliverable.
+
+## Mountain-glass interface update
+
+The desktop now follows the supplied reference: full-window landscape, frosted navy panels, a sidebar, an estimated-strength ring, readable settings, and five compact history rows. Panel backgrounds are composited with Pillow; widgets use standard Tk, avoiding CustomTkinter font compatibility issues.
+
+Keyboard: **Ctrl+G** generates, **Esc** masks output and history, and **Tab** moves through canvas actions and input fields. **Enter/Space** activates focused actions. History remains masked until revealed. Each generation masks the new password again. Long history previews are shortened visually; copy always uses the complete value.

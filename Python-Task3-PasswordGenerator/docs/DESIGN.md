@@ -21,3 +21,7 @@ Length 8 is supported for the exercise; the default is 18. Requiring two categor
 ## Learning outcomes
 
 Dataclasses, validation and exceptions, secure random sampling, separation of concerns, bounded collections, event-driven GUI programming, dependency management, automated testing, and honest documentation of validation limits.
+
+## Mountain-glass rendering
+
+The landscape supplied with the project is fitted to the window. Pillow blurs a copy, tints rounded panel regions, and composites them onto the scene. The image is rebuilt only when window dimensions change; updates redraw canvas controls against the cached image. Two persistent native Tk entry widgets provide selection, copying and numeric editing without being destroyed on redraw. Standard Tk and available system fonts support Tk 8.6/9 without requiring CustomTkinter.

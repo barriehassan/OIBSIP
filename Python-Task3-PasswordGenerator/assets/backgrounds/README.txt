@@ -1,2 +1,1 @@
-Place an image that you have permission to use at assets/backgrounds/mountain.png.
-If omitted, Password Forge draws a built-in pastel mountain header automatically.
+mountain.png is the landscape supplied by the author for this project. It is bundled for offline use. Replace it only with artwork you have permission to distribute. Missing or unreadable artwork uses a procedural fallback.
