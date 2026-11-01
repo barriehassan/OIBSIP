@@ -12,3 +12,7 @@ htmlcov/
 *.db-*
 *.sqlite-*
 *.sqlite3-*
+
+# Exported reports and interrupted report staging files are private
+*.pdf
+.bmi-report-*.tmp

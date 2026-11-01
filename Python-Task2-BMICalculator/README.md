@@ -1,6 +1,6 @@
 # NOMOLI FORGE — BMI Insight
 
-An advanced Python desktop BMI calculator project for the Oasis Infobyte Python Programming internship. Tasks 03–06 implement the offline calculation core, SQLite persistence, application services and a CustomTkinter desktop UI based on the approved Mockup 05 — Vitality Analytics. Python 3.10+ is required; Python 3.12 with Tk 8.6 is the tested desktop configuration.
+An advanced Python desktop BMI calculator project for the Oasis Infobyte Python Programming internship. Tasks 03–07 implement the offline calculation core, SQLite persistence, application services and a CustomTkinter desktop UI based on the approved Mockup 05 — Vitality Analytics. Python 3.10+ is required; Python 3.12 with Tk 8.6 is the tested desktop configuration.
 
 ## Completed scope
 
@@ -12,8 +12,10 @@ An advanced Python desktop BMI calculator project for the Oasis Infobyte Python 
 - Live multicolour BMI gauge, classification metadata, summary cards and explicit saving.
 - Local mountain-reference background and readable empty states.
 - Embedded Matplotlib BMI/weight charts, date filters and full-precision historical statistics.
+- Progress Dashboard with six summary cards, recent measurements and descriptive insights.
+- Local ReportLab PDF exports with optional history/charts and custom date ranges.
 
-SQLite profile and measurement persistence and the desktop GUI are implemented. BMI/weight chart rendering and the Trends page are implemented. Progress Dashboard and PDF reports remain planned; their navigation items show honest availability messages. No network calls are implemented. The core remains independent of storage and presentation.
+SQLite profile and measurement persistence and the desktop GUI are implemented. BMI/weight chart rendering and the Trends page are implemented. Progress Dashboard and PDF reports are implemented. No network calls are implemented. The core remains independent of storage and presentation.
 
 ## Desktop preview
 
@@ -42,18 +44,17 @@ Zero, negative, non-finite and nonnumeric BMI values are rejected. These are the
 ```text
 Python-Task2-BMICalculator/
 ├── app/
-│   ├── __init__.py
-│   └── core/
-│       ├── __init__.py
-│       ├── calculator.py
-│       ├── classification.py
-│       ├── validator.py
-│       ├── models.py
-│       └── conversions.py
+│   ├── core/           # BMI, validation, categories and conversions
+│   ├── database/       # SQLite connections, schema and repositories
+│   ├── services/       # Profiles, measurements, history, analytics, dashboard, reports
+│   ├── visualization/  # Shared Matplotlib renderers
+│   ├── reports/        # Validated report models, print styles, atomic PDF renderer
+│   └── ui/             # Calculator, Profiles, History, Trends, Dashboard, Reports
+├── assets/
+├── docs/               # Milestone reviews and screenshots
 ├── tests/
-│   ├── test_calculator.py
-│   ├── test_classification.py
-│   └── test_validator.py
+├── main.py
+├── run_windows.bat
 ├── README.md
 ├── requirements.txt
 ├── pyproject.toml
@@ -205,7 +206,7 @@ Age and gender are omitted because the existing profiles do not support those fi
 
 Latest Weight and Total Records use SQLite data. Measurement Change compares the newest measurement to the **first measurement**, matching the reference label; it stays empty until two records exist. It is a signed arithmetic difference, not a health judgment. The underlying Task 04 comparison service still provides latest-versus-previous when needed.
 
-Gauge rendering is a display mapping over BMI 12–40; the marker saturates outside that range while the number and classification remain accurate. Text formatting never changes stored precision. Trend charts use AnalyticsService snapshots backed by the existing HistoryService. UIController.trend_points() remains available for compatibility. The preview uses actual saved records. Trends opens the functional Measurement Trends screen; Dashboard and Reports remain clearly labelled planned features.
+Gauge rendering is a display mapping over BMI 12–40; the marker saturates outside that range while the number and classification remain accurate. Text formatting never changes stored precision. Trend charts use AnalyticsService snapshots backed by the existing HistoryService. UIController.trend_points() remains available for compatibility. The preview uses actual saved records. Trends opens the functional Measurement Trends screen; Dashboard and Reports now provide the Task 07 functionality described below.
 
 The main content scrolls in shorter windows; the top navigation and hero remain fixed. Minimum logical window size is 1240×860; the preferred visual review size is 1440×1010. Operating-system scaling may change the physical screen space needed. Native title-bar controls are preserved; the in-app right-hand controls also minimize, maximize and close the window.
 
@@ -269,12 +270,65 @@ Final Task 06 test run: **276 passed, 0 failed, 0 skipped**. This includes all 2
 
 The entry point was smoke-launched with an isolated application-data directory, remained running and produced no stderr. [Verified captures and detailed review](docs/TASK06_REVIEW.md) cover Calculator, Trends, filters, compact layout and empty/profile-isolated states.
 
-## Planned work and limitations
+## Task 07: Progress Dashboard and PDF Reports
 
-Task 06 implements charts; Progress Dashboard, PDF reports, AI and cloud features remain unimplemented. No Task 07 work starts automatically. SQLite remains local and unencrypted; there is no general migration system or backup UI. Profile isolation remains organizational rather than authenticated access control.
+### Progress Dashboard
+
+Open **Dashboard** using the existing horizontal navigation. Choose a local profile and one of the same periods used by Trends. Six cards show latest BMI/category/date, latest weight/date, BMI change, weight change, selected-period versus all-time record counts, and the last measurement date/time. Changes compare the latest two records **inside the selected period**. They are neutral arithmetic differences, never health judgments.
+
+The Dashboard reuses the Task 06 BMI and weight renderers and optional adult reference lines. Scroll below the charts for highest/lowest/average BMI, first/latest dates, and the four most recent measurements in the selected period. Empty profiles show **No measurements recorded yet.** and a working Open Calculator action. One record shows no change or established trend. Ties retain timestamp/ID order; calculations preserve stored precision.
+
+DashboardService obtains one all-history snapshot and derives period statistics while retaining a separate all-time count. Saving/deleting measurements, profile selection, renaming and deletion refresh the existing views. Hidden Dashboard/Reports views also refresh. The original Calculator layout and core/database APIs are preserved.
+
+![Progress Dashboard](docs/screenshots/task07/dashboard.png)
+
+![Dashboard insights after scrolling](docs/screenshots/task07/insights.png)
+
+### Generate a PDF
+
+1. Open **Reports** and select the desired profile.
+2. Keep **BMI Measurement Summary** or enter a title of 1–100 characters.
+3. Choose All records, a rolling period, or **Custom dates**. Enter both custom dates as YYYY-MM-DD; both UTC calendar dates are inclusive. The start cannot follow the end. Rolling-period semantics match Trends/Dashboard.
+4. Choose whether to include measurement history and BMI/weight charts.
+5. Select **Choose location & Generate PDF**, choose a folder/filename, and confirm replacement in the native save dialog if applicable. Cancelling creates no report.
+6. Wait for the success message identifying the captured profile and saved path. You may use other pages during export; closing the app asks you to wait for completion.
+
+PDFs use A4 white pages, navy/teal accents, embedded searchable DejaVu fonts, page numbers, repeated history table headings and actual-record charts. They contain profile/period/generation information, latest measurement and adult category, progress versus the first measurement in the period, descriptive statistics, optional history/charts, adult-category definitions and the required BMI disclaimer. Charts are omitted with an explanation for fewer than two records. Empty histories still produce an informative report.
+
+ReportService prepares a frozen snapshot using existing profile/history services. The PDF renderer receives no database connection or GUI widget. A separate spawned process renders each export with isolated Matplotlib state; Tk polls completion. Only one export runs per application window. The snapshot is captured when Generate is selected: switching, renaming or deleting profiles afterward does not change that in-progress report, whose feedback identifies its original profile.
+
+Charts use in-memory PNGs at 160 dpi. Temporary PDF staging files live beside the chosen destination and are removed after completion/failure. A completed PDF is atomically published; an existing file is preserved if rendering fails. Safe suggested filenames avoid Windows reserved characters. Programmatic `generate_pdf(data, path)` refuses replacement by default; callers must explicitly pass `overwrite=True`. Invalid paths/options, unavailable fonts/characters and export failures give controlled messages. Unclean process/OS termination may leave a `.bmi-report-*.tmp` staging file; ordinary failures clean it up.
+
+![Reports controls](docs/screenshots/task07/reports.png)
+
+### Report privacy and dependencies
+
+Export is entirely local. PDFs are ordinary, **unencrypted** files that contain the selected profile name and measurements; only save/share them where you intend. No report is automatically saved to the source directory or uploaded. `.gitignore` excludes PDFs and report staging files; generated personal reports and runtime databases are not included in the project archive. Review screenshots use explicitly named verification profiles in temporary databases.
+
+Added runtime dependency: **ReportLab >=4.4,<5** (verified 4.4.9). Added test dependency: **pypdf >=6,<7** (verified 6.10.0), used to check PDF text, images, structure and pagination. Matplotlib's bundled DejaVu fonts are reused, so no font download or extra font package is needed. Unsupported glyphs in profile names/titles produce an explicit error rather than an unreadable PDF; full CJK/emoji and complex-script typography are not supported.
+
+After updating the source, run from `Python-Task2-BMICalculator` on Windows:
+
+```bat
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe main.py
+.venv\Scripts\python.exe -m pytest -q
+```
+
+Create the environment with `py -3.12 -m venv .venv` first if it does not exist. Installing dependencies needs internet or a local wheel source; daily use and exports do not.
+
+### Task 07 verification
+
+The unchanged Task 06 archive passed **276 tests, 0 failed, 0 skipped** after restoring the display environment. Final Task 07 suite: **324 passed, 0 failed, 0 skipped**, including all original tests. The initial headless baseline was 260 passed/16 explicitly skipped; the full Tk 8.6 runs exercised those GUI cases. All test data lives in temporary directories.
+
+Checks cover Dashboard values/filtering/isolation/refresh, PDF signature/text/classification, custom date edges, empty and single histories, long-table pagination, actual embedded charts, failure cleanup, preservation of existing output, navigation during a real spawned export, and safe window shutdown. Short (3-page), empty (3-page) and long (8-page) PDFs were generated; rendered pages were visually inspected. [Task 07 review and captures](docs/TASK07_REVIEW.md) records the details.
+
+## Remaining work and limitations
+
+Task 07 is implemented. No Task 08 work starts automatically. AI recommendations, cloud integration and authentication are not implemented. SQLite remains local and unencrypted; there is no general migration system or backup UI. Profile isolation remains organizational rather than authenticated access control.
 
 The approved horizontal navigation, mountain hero, cards and gauge are preserved. Chart backgrounds match the existing Task 05 navy cards, with teal #14B8A6 and cyan #06B6D4 data lines, readable grey labels and subtle grid lines. The Calculator chart is compact; full statistics and larger plots live in Trends. Native Windows rendering/scaling still needs local manual review. Original high-resolution standalone mountain artwork and official vector branding were unavailable as documented in Task 05. No commit/push is performed without approval.
 
 ## Educational limitations
 
-BMI is a screening reference, not a diagnosis or a direct measurement of body fat. It does not distinguish muscle from fat or describe individual health. Adult categories are not appropriate for assessing children; pregnancy and individual circumstances also require professional interpretation. This software provides educational calculations, not medical advice.
+BMI is a screening reference, not a diagnosis or a direct measurement of body fat. It does not distinguish muscle from fat or describe individual health. The implemented classification is intended for adults aged 20 and older. Adult categories are not appropriate for assessing children; pregnancy and individual circumstances also require professional interpretation. This software provides educational calculations, not medical advice.

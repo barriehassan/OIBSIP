@@ -2,5 +2,7 @@
 customtkinter==6.0.0
 Pillow>=10.4,<13
 matplotlib>=3.10,<3.11
+reportlab>=4.4,<5
 # Test tooling (kept here to retain a single dependency configuration).
 pytest>=8,<10
+pypdf>=6,<7  # PDF structure/text verification

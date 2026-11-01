@@ -13,6 +13,8 @@ from .gauge import BMIGauge
 from .icons import icon
 from .chart_widget import ChartWidget
 from .trends_view import TrendsView
+from .dashboard_view import DashboardView
+from .reports_view import ReportsView
 from app.services.analytics_service import PERIODS, prepare_history
 from .theme import BG, CARD, INNER, BORDER, TEXT, MUTED, TEAL, TEAL_DARK, CORAL, FONT
 
@@ -54,6 +56,8 @@ class BMIWindow(ctk.CTk):
         self.grid_rowconfigure(2,weight=1)
         self.active_page = 'Calculator'
         self.trends_page = None
+        self.dashboard_page = None
+        self.reports_page = None
         self.preview_period = 'Last 6 months'
         self.profile_map: dict[str,int] = {}
         self.weight = tk.StringVar()
@@ -123,7 +127,7 @@ class BMIWindow(ctk.CTk):
 
     def _resize_content(self,event) -> None:
         if event.widget is self and hasattr(self,'body'):
-            self.body.configure(height=max(748,event.height-262))
+            self.body.configure(height=max(1050 if self.active_page=='Dashboard' else 748,event.height-262))
 
     def toggle_maximize(self) -> None:
         try:
@@ -333,12 +337,16 @@ class BMIWindow(ctk.CTk):
             latest=preview.statistics.latest
             self.trend_note.configure(text=f'{len(preview.records)} records · Latest {latest.weight_kg:g} kg · UTC' if latest else 'No measurements in this period · UTC')
             if self.trends_page is not None:self.trends_page.refresh(all_data)
+            if self.dashboard_page is not None:self.dashboard_page.refresh(all_data)
+            if self.reports_page is not None:self.reports_page.refresh(all_data)
         except (ValidationError,DatabaseError) as error:
             for value,detail in zip(self.summary_values,self.summary_details):
                 value.configure(text='—');detail.configure(text='History unavailable')
             self.preview_chart.clear(prepare_history([],self.controller.profile_id))
             self.trend_note.configure(text='History could not be loaded.')
             if self.trends_page is not None:self.trends_page.refresh(prepare_history([],self.controller.profile_id))
+            if self.dashboard_page is not None:self.dashboard_page.clear_unavailable()
+            if self.reports_page is not None:self.reports_page.refresh()
             self.show_error(error)
 
     def new_profile(self) -> None:
@@ -356,7 +364,7 @@ class BMIWindow(ctk.CTk):
         if name is None:return
         try:
             self.controller.profiles.rename(profile_id,name)
-            self.reload_profiles();self.navigate('Profiles')
+            self.reload_profiles();self.refresh_summary();self.navigate('Profiles')
         except (ValidationError,DatabaseError) as error:self.show_error(error)
 
     def delete_profile(self,profile_id: int) -> None:
@@ -375,6 +383,21 @@ class BMIWindow(ctk.CTk):
 
     def navigate(self,page: str) -> None:
         self.active_page=page;self._highlight_nav()
+        self.body.configure(height=max(1050 if page=='Dashboard' else 748,self.winfo_height()-262))
+        for view in (self.dashboard_page,self.reports_page):
+            if view is not None:view.grid_remove()
+        if page in ('Dashboard','Reports'):
+            self.calculator.grid_remove();self.other_page.grid_remove()
+            if self.trends_page is not None:self.trends_page.grid_remove()
+            if page=='Dashboard':
+                if self.dashboard_page is None:self.dashboard_page=DashboardView(self.body,self.controller,self.select_trends_profile,self.show_error,lambda:self.navigate('Calculator'))
+                view=self.dashboard_page
+            else:
+                if self.reports_page is None:self.reports_page=ReportsView(self.body,self.controller,self.select_trends_profile,self.show_error)
+                view=self.reports_page
+            view.grid(row=0,column=0,sticky='nsew');view.refresh()
+            self.viewport._parent_canvas.yview_moveto(0)
+            return
         if self.trends_page is not None:self.trends_page.grid_remove()
         if page=='Trends':
             self.calculator.grid_remove();self.other_page.grid_remove()
@@ -462,6 +485,9 @@ class BMIWindow(ctk.CTk):
         messagebox.showerror('BMI Insight',str(error),parent=self)
 
     def destroy(self) -> None:
+        if self.reports_page is not None and self.reports_page.busy:
+            messagebox.showinfo('Report in progress','Please wait for the PDF export to finish before closing BMI Insight.',parent=self)
+            return
         if self._hero_job is not None:
             self.after_cancel(self._hero_job);self._hero_job=None
         if self._hero_source is not None:self._hero_source.close()
