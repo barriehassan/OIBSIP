@@ -2,6 +2,8 @@
 
 **Task 01 · composition constraints, not a new design**
 
+> **Task 02 update — 2 November 2026:** The exact reference `image(20261102-081659).png` is now supplied and visually inspected. The absence noted below describes Task 01 at preparation time. See [UI_DESIGN_SPEC.md](UI_DESIGN_SPEC.md) for the measured anatomy and detailed translation.
+
 ## Authority
 
 The exact user-approved dark weather dashboard image is the authoritative visual reference. It must not be replaced with another dashboard. The text specification describes the composition below; the actual selected image was not available or positively identified in this execution. No pixel measurements, visual comparison or screenshot fidelity is claimed. Attach that exact image before Task 02 layout signoff.

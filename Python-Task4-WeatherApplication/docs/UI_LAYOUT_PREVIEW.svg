@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1220" viewBox="0 0 1440 1220">
+<rect width="1440" height="1220" fill="#2B2B2D"/>
+<text x="40" y="34" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#F5F5F7">SKYCAST / TASK 02</text>
+<text x="40" y="59" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#C6B6EA">STATIC STRUCTURAL WIREFRAME — placeholders only; not a running application</text>
+<rect x="40" y="80" width="1360" height="1140" rx="32" fill="#111015"/>
+<rect x="72" y="104" width="40" height="48" rx="16" fill="#1B1B1D"/>
+<text x="82" y="135" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#F5F5F7">NF</text>
+<text x="124" y="124" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" fill="#F5F5F7">SkyCast</text>
+<text x="124" y="146" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="400" fill="#B0AFBA">[Resolved city, country]</text>
+<rect x="386" y="104" width="702" height="48" rx="24" fill="#1E1E1E"/>
+<text x="406" y="134" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#B0AFBA">Search city or postal code…</text>
+<rect x="950" y="110" width="130" height="36" rx="18" fill="#BBD7EC"/>
+<text x="965" y="134" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#14151B">Get Weather</text>
+<rect x="1112" y="104" width="120" height="48" rx="16" fill="#1B1B1D"/>
+<text x="1130" y="134" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#F5F5F7">°C  /  °F</text>
+<text x="1248" y="134" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#B0AFBA">★   More</text>
+<text x="72" y="218" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="700" fill="#F5F5F7">Today</text>
+<line x1="72" y1="225" x2="118" y2="225" stroke="#BBD7EC"/>
+<text x="145" y="218" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#B0AFBA">Tomorrow</text>
+<text x="260" y="218" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#B0AFBA">Next 7 Days</text>
+<rect x="72" y="248" width="242" height="220" rx="24" fill="#BBD7EC"/>
+<text x="88" y="277" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="700" fill="#14151B">TODAY · [local time]</text>
+<text x="88" y="338" font-family="DejaVu Sans, sans-serif" font-size="48" font-weight="700" fill="#14151B">—°</text>
+<rect x="225" y="300" width="66" height="66" rx="14" fill="#A7C7DC"/>
+<text x="235" y="338" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="400" fill="#353B45">ICON</text>
+<text x="88" y="369" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#14151B">[Current condition]</text>
+<text x="88" y="397" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#353B45">Humidity —% · Wind — km/h</text>
+<text x="88" y="421" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#353B45">Equivalent —°F</text>
+<text x="88" y="446" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#353B45">Selected · source time in detail</text>
+<rect x="334" y="248" width="101" height="220" rx="24" fill="#1B1B1D"/>
+<text x="352" y="278" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#F5F5F7">Day +1</text>
+<line x1="350" y1="292" x2="419" y2="292" stroke="#34343C"/>
+<rect x="360" y="310" width="48" height="48" rx="12" fill="#28282D"/>
+<text x="366" y="339" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Icon</text>
+<text x="350" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="348" y="434" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hi / Lo —°</text>
+<rect x="455" y="248" width="101" height="220" rx="24" fill="#1B1B1D"/>
+<text x="473" y="278" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#F5F5F7">Day +2</text>
+<line x1="471" y1="292" x2="540" y2="292" stroke="#34343C"/>
+<rect x="481" y="310" width="48" height="48" rx="12" fill="#28282D"/>
+<text x="487" y="339" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Icon</text>
+<text x="471" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="469" y="434" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hi / Lo —°</text>
+<rect x="576" y="248" width="101" height="220" rx="24" fill="#1B1B1D"/>
+<text x="594" y="278" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#F5F5F7">Day +3</text>
+<line x1="592" y1="292" x2="661" y2="292" stroke="#34343C"/>
+<rect x="602" y="310" width="48" height="48" rx="12" fill="#28282D"/>
+<text x="608" y="339" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Icon</text>
+<text x="592" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="590" y="434" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hi / Lo —°</text>
+<rect x="697" y="248" width="101" height="220" rx="24" fill="#1B1B1D"/>
+<text x="715" y="278" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#F5F5F7">Day +4</text>
+<line x1="713" y1="292" x2="782" y2="292" stroke="#34343C"/>
+<rect x="723" y="310" width="48" height="48" rx="12" fill="#28282D"/>
+<text x="729" y="339" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Icon</text>
+<text x="713" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="711" y="434" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hi / Lo —°</text>
+<rect x="818" y="248" width="101" height="220" rx="24" fill="#1B1B1D"/>
+<text x="836" y="278" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#F5F5F7">Day +5</text>
+<line x1="834" y1="292" x2="903" y2="292" stroke="#34343C"/>
+<rect x="844" y="310" width="48" height="48" rx="12" fill="#28282D"/>
+<text x="850" y="339" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Icon</text>
+<text x="834" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="832" y="434" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hi / Lo —°</text>
+<rect x="939" y="248" width="101" height="220" rx="24" fill="#1B1B1D"/>
+<text x="957" y="278" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#F5F5F7">Day +6</text>
+<line x1="955" y1="292" x2="1024" y2="292" stroke="#34343C"/>
+<rect x="965" y="310" width="48" height="48" rx="12" fill="#28282D"/>
+<text x="971" y="339" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Icon</text>
+<text x="955" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="953" y="434" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hi / Lo —°</text>
+<text x="1072" y="218" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#F5F5F7">Chance of Rain</text>
+<text x="1072" y="241" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Same six-hour window as below</text>
+<text x="1072" y="279" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">100%</text>
+<line x1="1120" y1="275" x2="1368" y2="275" stroke="#34343C"/>
+<text x="1072" y="342" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">50%</text>
+<line x1="1120" y1="338" x2="1368" y2="338" stroke="#34343C"/>
+<text x="1072" y="405" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">0%</text>
+<line x1="1120" y1="401" x2="1368" y2="401" stroke="#34343C"/>
+<text x="1120" y="428" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">H1</text>
+<text x="1162" y="428" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">H2</text>
+<text x="1204" y="428" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">H3</text>
+<text x="1246" y="428" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">H4</text>
+<text x="1288" y="428" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">H5</text>
+<text x="1330" y="428" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">H6</text>
+<text x="1122" y="365" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="400" fill="#B0AFBA">[No probability data]</text>
+<rect x="72" y="484" width="230" height="72" rx="16" fill="#1B1B1D"/>
+<text x="88" y="509" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Humidity</text>
+<text x="88" y="538" font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#F5F5F7">—%</text>
+<rect x="318" y="484" width="230" height="72" rx="16" fill="#1B1B1D"/>
+<text x="334" y="509" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Wind</text>
+<text x="334" y="538" font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#F5F5F7">— km/h</text>
+<rect x="564" y="484" width="230" height="72" rx="16" fill="#1B1B1D"/>
+<text x="580" y="509" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Feels like · Phase 2</text>
+<text x="580" y="538" font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#F5F5F7">—°</text>
+<rect x="810" y="484" width="230" height="72" rx="16" fill="#1B1B1D"/>
+<text x="826" y="509" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Rain · Phase 2</text>
+<text x="826" y="538" font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#F5F5F7">—%</text>
+<rect x="72" y="572" width="148" height="104" rx="16" fill="#1B1B1D"/>
+<text x="84" y="596" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hour 1 · [local]</text>
+<text x="84" y="628" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="400" fill="#F5F5F7">—°  [icon]</text>
+<text x="84" y="653" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Probability —%</text>
+<rect x="236" y="572" width="148" height="104" rx="16" fill="#1B1B1D"/>
+<text x="248" y="596" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hour 2 · [local]</text>
+<text x="248" y="628" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="400" fill="#F5F5F7">—°  [icon]</text>
+<text x="248" y="653" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Probability —%</text>
+<rect x="400" y="572" width="148" height="104" rx="16" fill="#1B1B1D"/>
+<text x="412" y="596" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hour 3 · [local]</text>
+<text x="412" y="628" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="400" fill="#F5F5F7">—°  [icon]</text>
+<text x="412" y="653" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Probability —%</text>
+<rect x="564" y="572" width="148" height="104" rx="16" fill="#1B1B1D"/>
+<text x="576" y="596" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hour 4 · [local]</text>
+<text x="576" y="628" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="400" fill="#F5F5F7">—°  [icon]</text>
+<text x="576" y="653" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Probability —%</text>
+<rect x="728" y="572" width="148" height="104" rx="16" fill="#1B1B1D"/>
+<text x="740" y="596" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hour 5 · [local]</text>
+<text x="740" y="628" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="400" fill="#F5F5F7">—°  [icon]</text>
+<text x="740" y="653" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Probability —%</text>
+<rect x="892" y="572" width="148" height="104" rx="16" fill="#1B1B1D"/>
+<text x="904" y="596" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Hour 6 · [local]</text>
+<text x="904" y="628" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="400" fill="#F5F5F7">—°  [icon]</text>
+<text x="904" y="653" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Probability —%</text>
+<text x="1072" y="516" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="400" fill="#C6B6EA">G / compact statistics</text>
+<text x="1072" y="540" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="400" fill="#C6B6EA">H / next six hours</text>
+<text x="1072" y="578" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">No real weather values</text>
+<text x="1072" y="598" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">are shown in this preview.</text>
+<text x="1072" y="638" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Voice and trend expand</text>
+<text x="1072" y="658" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">below hourly detail later.</text>
+<text x="72" y="724" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#F5F5F7">Global Map</text>
+<text x="800" y="724" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#B0AFBA">View wide</text>
+<text x="1072" y="724" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#F5F5F7">Other Large Cities</text>
+<rect x="72" y="744" width="968" height="408" rx="24" fill="#1B1B1D"/>
+<rect x="148" y="744" width="816" height="408" rx="0" fill="#1B1B1D"/>
+<line x1="148" y1="760" x2="148" y2="1136" stroke="#25252A"/>
+<line x1="284" y1="760" x2="284" y2="1136" stroke="#25252A"/>
+<line x1="420" y1="760" x2="420" y2="1136" stroke="#25252A"/>
+<line x1="556" y1="760" x2="556" y2="1136" stroke="#25252A"/>
+<line x1="692" y1="760" x2="692" y2="1136" stroke="#25252A"/>
+<line x1="828" y1="760" x2="828" y2="1136" stroke="#25252A"/>
+<line x1="964" y1="760" x2="964" y2="1136" stroke="#25252A"/>
+<line x1="164" y1="812" x2="948" y2="812" stroke="#25252A"/>
+<line x1="164" y1="880" x2="948" y2="880" stroke="#25252A"/>
+<line x1="164" y1="948" x2="948" y2="948" stroke="#25252A"/>
+<line x1="164" y1="1016" x2="948" y2="1016" stroke="#25252A"/>
+<line x1="164" y1="1084" x2="948" y2="1084" stroke="#25252A"/>
+<text x="320" y="903" font-family="DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#B0AFBA">LOCAL DARK WORLD BASEMAP</text>
+<text x="325" y="935" font-family="DejaVu Sans, sans-serif" font-size="14" font-weight="400" fill="#B0AFBA">Equirectangular land asset + real coordinate pins</text>
+<text x="344" y="963" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="400" fill="#B0AFBA">Map artwork intentionally not fabricated here</text>
+<text x="96" y="1127" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Location overview · weather only for fetched places</text>
+<rect x="1072" y="744" width="296" height="128" rx="22" fill="#1B1B1D"/>
+<text x="1088" y="769" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">[Country / region]</text>
+<text x="1088" y="795" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#F5F5F7">[Secondary city 1]</text>
+<text x="1088" y="823" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">[Current condition]</text>
+<text x="1088" y="851" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Source time / status</text>
+<text x="1295" y="820" font-family="DejaVu Sans, sans-serif" font-size="24" font-weight="400" fill="#F5F5F7">—°</text>
+<rect x="1072" y="884" width="296" height="128" rx="22" fill="#1B1B1D"/>
+<text x="1088" y="909" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">[Country / region]</text>
+<text x="1088" y="935" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#F5F5F7">[Secondary city 2]</text>
+<text x="1088" y="963" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">[Current condition]</text>
+<text x="1088" y="991" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Source time / status</text>
+<text x="1295" y="960" font-family="DejaVu Sans, sans-serif" font-size="24" font-weight="400" fill="#F5F5F7">—°</text>
+<rect x="1072" y="1024" width="296" height="128" rx="22" fill="#1B1B1D"/>
+<text x="1088" y="1049" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">[Country / region]</text>
+<text x="1088" y="1075" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="400" fill="#F5F5F7">[Secondary city 3]</text>
+<text x="1088" y="1103" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">[Current condition]</text>
+<text x="1088" y="1131" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Source time / status</text>
+<text x="1295" y="1100" font-family="DejaVu Sans, sans-serif" font-size="24" font-weight="400" fill="#F5F5F7">—°</text>
+<text x="72" y="1191" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#B0AFBA">Weather data: Open-Meteo · Icons: OpenWeather · Map: Natural Earth</text>
+<text x="974" y="1191" font-family="DejaVu Sans, sans-serif" font-size="12" font-weight="400" fill="#C6B6EA">Scrollable document: 1440 px wide</text>
+</svg>
