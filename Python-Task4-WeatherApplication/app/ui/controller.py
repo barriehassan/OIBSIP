@@ -18,6 +18,8 @@ from app.providers.geocoding import OpenMeteoGeocoding
 from app.providers.open_meteo import OpenMeteoWeather
 from app.services.weather_service import WeatherService, LocationWeatherResult
 from .presentation import local_today
+from app.services.cache_service import retrieve, WeatherResult, provenance
+from app.services.ip_location_service import IpLocationService
 
 
 class LatestWorkers:
@@ -110,11 +112,25 @@ class DisplayState:
     hour_page: int = 0
     cities: dict = field(default_factory=dict)
     city_loading: set = field(default_factory=set)
+    cache_source: str = "network"
+    offline: bool = False
+    storage_notice: str = ""
+    approximate: object = None
 
 
 class Controller:
-    def __init__(self, backend=None, workers=None, clock=None, tick=monotonic):
+    def __init__(
+        self,
+        backend=None,
+        workers=None,
+        clock=None,
+        tick=monotonic,
+        store=None,
+        ip_service=None,
+    ):
         self.backend = backend or Backend()
+        self.store = store
+        self.ip_service = ip_service or IpLocationService()
         self.workers = workers or LatestWorkers()
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.tick = tick
@@ -132,6 +148,7 @@ class Controller:
         self.generation += 1
         self.workers.cancel("main")
         self.state.candidates = ()
+        self.state.approximate = None
         if self.state.loading:
             self.state.status = (
                 "Search cancelled. Previous results remain."
@@ -185,8 +202,16 @@ class Controller:
             return
         self.last_action = ("weather", location)
         saved = self.state.cities.get(location)
-        if saved and saved.weather and not saved.error and not force:
+        if (
+            saved
+            and saved.weather
+            and not saved.error
+            and not force
+            and self.store is None
+        ):
             self.state.bundle = saved.weather
+            self.state.cache_source = "session cache"
+            self.state.offline = False
             self.state.tab = "Today"
             self.state.selected_date = local_today(saved.weather, self.clock())
             self.state.hour_page = 0
@@ -201,12 +226,42 @@ class Controller:
             False,
         )
         token = (self.generation, "weather")
-        self.workers.submit("main", token, lambda: self.backend.weather(location))
+        self.workers.submit(
+            "main",
+            token,
+            lambda: (
+                retrieve(self.backend, self.store, location, self.clock(), force)
+                if self.store
+                else self.backend.weather(location)
+            ),
+        )
+
+    def detect_location(self, *, consent=False):
+        if consent is not True or self.closed:
+            return False
+        if self.state.loading and self.last_action == ("detect", None):
+            return False
+        self.invalidate()
+        self.last_action = ("detect", None)
+        self.state.loading = True
+        self.state.failed = False
+        self.state.status = "Detecting approximate city · IPWHOIS.IO…"
+        self.workers.submit(
+            "main",
+            (self.generation, "detect"),
+            lambda: self.ip_service.detect(consent=True),
+        )
+        return True
 
     def retry(self):
         if self.last_action:
             kind, arg = self.last_action
-            self.search(arg) if kind == "search" else self.choose(arg, force=True)
+            if kind == "search":
+                self.search(arg)
+            elif kind == "weather":
+                self.choose(arg, force=True)
+            else:
+                self.state.status = "Choose Detect My Location to give consent again."
 
     def refresh(self):
         if self.state.bundle:
@@ -263,13 +318,21 @@ class Controller:
         self.city_generation[location] = generation
         self.state.city_loading.add(location)
         self.workers.submit(
-            ("city", location), generation, lambda: self.backend.weather(location)
+            ("city", location),
+            generation,
+            lambda: (
+                retrieve(self.backend, self.store, location, self.clock(), True)
+                if self.store
+                else self.backend.weather(location)
+            ),
         )
 
     def tick_dates(self):
         b = self.state.bundle
         if not b:
             return False
+        if self.clock() - b.retrieved_at >= timedelta(minutes=20):
+            self.state.cache_source = "stale cache"
         today = local_today(b, self.clock())
         desired = (
             today + timedelta(days=int(self.state.tab == "Tomorrow"))
@@ -308,6 +371,11 @@ class Controller:
                     self.state.status = str(error)
                     self.state.failed = True
                     self._rate_limit(error)
+                elif kind == "detect":
+                    self.state.approximate = value
+                    self.state.status = (
+                        "Approximate location found. Confirm it or search manually."
+                    )
                 elif kind == "search":
                     if len(value) == 1:
                         self.choose(value[0])
@@ -317,12 +385,21 @@ class Controller:
                             "Choose the matching city, region and country."
                         )
                 else:
+                    result = (
+                        value
+                        if isinstance(value, WeatherResult)
+                        else WeatherResult(value)
+                    )
+                    value = result.bundle
+                    self.state.cache_source = result.source
+                    self.state.offline = result.offline
+                    self.state.storage_notice = result.notice
                     self.state.bundle = value
                     self.state.failed = False
                     self.state.tab = "Today"
                     self.state.selected_date = local_today(value, self.clock())
                     self.state.hour_page = 0
-                    self.state.status = "Weather updated · Open-Meteo model data"
+                    self.state.status = provenance(value, result.source, result.offline)
                     if value.location in self.state.cities:
                         self.state.cities[value.location] = LocationWeatherResult(
                             value.location, weather=value
@@ -347,7 +424,20 @@ class Controller:
                     self.state.cities[loc] = LocationWeatherResult(loc, previous, error)
                     self._rate_limit(error)
                 else:
-                    self.state.cities[loc] = LocationWeatherResult(loc, weather=value)
+                    result = (
+                        value
+                        if isinstance(value, WeatherResult)
+                        else WeatherResult(value)
+                    )
+                    self.state.cities[loc] = LocationWeatherResult(
+                        loc,
+                        weather=result.bundle,
+                        error=(
+                            WeatherProviderError("Cached weather")
+                            if result.offline
+                            else None
+                        ),
+                    )
         return changed
 
     def _rate_limit(self, error):

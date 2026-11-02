@@ -18,6 +18,7 @@ class ForecastCard(ctk.CTkFrame):
         command,
         width,
         observed_time=None,
+        cached=False,
     ):
         super().__init__(
             parent,
@@ -83,7 +84,7 @@ class ForecastCard(ctk.CTkFrame):
                     f"Wind  {current.wind_speed_kmh:g} km/h\n"
                     f"Feels like  {temperature(current.feels_like_c, unit)}"
                 )
-                basis = "Current estimate"
+                basis = "Last retrieved" if cached else "Current estimate"
             else:
                 detail = (
                     (
@@ -182,5 +183,8 @@ class StatCard(ctk.CTkFrame):
             anchor="w", padx=14, pady=(8, 0)
         )
         t.label(self, value, size=18, bold=True, wraplength=210).pack(
+            anchor="w", padx=14, pady=(0, 3)
+        )
+        t.label(self, detail, size=10, color=t.MUTED, wraplength=220).pack(
             anchor="w", padx=14, pady=(0, 8)
         )

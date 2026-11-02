@@ -20,10 +20,12 @@ from .components.rain_chart import RainChart
 from .components.global_map import GlobalMap
 from .components.weather_icon import IconImages, fetch_icons, VALID_IDS
 from .components.chrome import symbol
+from .enhancements import Enhancements
+from app.storage.local import LocalStore, StorageError
 
 
 class SkyCastWindow(ctk.CTk):
-    def __init__(self, controller=None, *, remote_icons=True):
+    def __init__(self, controller=None, *, remote_icons=True, store=None, voice=None):
         ctk.set_appearance_mode("dark")
         super().__init__()
         self.title("NOMOLI FORGE — SkyCast")
@@ -35,7 +37,15 @@ class SkyCastWindow(ctk.CTk):
             min(1024, self.winfo_screenwidth() - 40),
             min(700, self.winfo_screenheight() - 70),
         )
-        self.controller = controller or Controller()
+        storage_notice = ""
+        if controller is None and store is None:
+            try:
+                store = LocalStore()
+            except StorageError as exc:
+                storage_notice = str(exc)
+        self.controller = controller or Controller(store=store)
+        if store is not None:
+            self.controller.store = store
         self.icons = IconImages()
         self.remote_icons = remote_icons
         self.dialog = None
@@ -51,7 +61,7 @@ class SkyCastWindow(ctk.CTk):
         self.shell = ctk.CTkFrame(self, fg_color=t.BG, corner_radius=42)
         self.shell.pack(fill="both", expand=True, padx=60, pady=60)
         self.header = ctk.CTkFrame(self.shell, fg_color="transparent")
-        self.header.pack(fill="x", padx=32, pady=(20, 20))
+        self.header.pack(fill="x", padx=32, pady=(20, 8))
         self.header.columnconfigure(0, minsize=380)
         self.header.columnconfigure(1, weight=1)
         self.header.columnconfigure(2, minsize=290)
@@ -134,7 +144,7 @@ class SkyCastWindow(ctk.CTk):
         self.page.columnconfigure(0, weight=1)
         self.page.columnconfigure(1, weight=0, minsize=280)
         tabs = ctk.CTkFrame(self.page, fg_color="transparent")
-        tabs.grid(row=0, column=0, sticky="ew", pady=(0, 28))
+        tabs.grid(row=0, column=0, sticky="ew", pady=(0, 16))
         self.tab_buttons = {}
         for name in ("Today", "Tomorrow", "Next 7 Days"):
             button = t.button(
@@ -163,7 +173,7 @@ class SkyCastWindow(ctk.CTk):
         )
         self.air_button.pack(side="left")
         t.label(self.page, "Chance of rain", size=18).grid(
-            row=0, column=1, sticky="w", padx=(30, 0), pady=(0, 28)
+            row=0, column=1, sticky="w", padx=(30, 0), pady=(0, 16)
         )
         self.card_strip = ctk.CTkScrollableFrame(
             self.page,
@@ -261,6 +271,7 @@ class SkyCastWindow(ctk.CTk):
             side="right"
         )
         self.detail_panel.grid_remove()
+        self.enhancements = Enhancements(self, store, voice, storage_notice)
         self.bind("<Control-l>", lambda event: self.entry.focus_set())
         self.bind("<Control-u>", lambda event: self.toggle_unit())
         self.bind("<Configure>", self.resized)
@@ -399,11 +410,13 @@ class SkyCastWindow(ctk.CTk):
             self.render_status()
 
     def search(self):
+        self.enhancements.voice.stop()
         self.close_candidates()
         self.controller.search(self.entry.get())
         self.render_status()
 
     def choose(self, location):
+        self.enhancements.voice.stop()
         self.close_candidates()
         self.controller.choose(location)
         self.render()
@@ -428,6 +441,7 @@ class SkyCastWindow(ctk.CTk):
         self.unit_changed(unit)
 
     def unit_changed(self, unit):
+        self.enhancements.voice.stop()
         self.unit.set(unit)
         self.controller.set_unit(unit)
         self.render()
@@ -471,6 +485,7 @@ class SkyCastWindow(ctk.CTk):
     def poll(self):
         if self.closed:
             return
+        self.enhancements.poll()
         changed = self.controller.drain()
         if self.controller.icon_version != getattr(self, "icon_version", 0):
             self.icons.accept(self.controller.icon_results)
@@ -612,6 +627,7 @@ class SkyCastWindow(ctk.CTk):
                     unit=s.unit,
                     command=lambda d=date: self.select_day(d),
                     width=selected_width if selected else small_width,
+                    cached=s.cache_source != "network",
                     observed_time=(
                         b.current.observed_at.astimezone(tz)
                         .strftime("%I:%M %p")
@@ -668,6 +684,7 @@ class SkyCastWindow(ctk.CTk):
             self.load_icons(b, slots, window)
         self.render_cities()
         self.map.set_markers(self.markers(), b.location if b else None)
+        self.enhancements.render()
 
     def reveal_selected(self):
         if self.closed or not self.controller.state.bundle:
@@ -926,7 +943,7 @@ class SkyCastWindow(ctk.CTk):
     def about(self):
         self.text_dialog(
             "About SkyCast",
-            "NOMOLI FORGE — SkyCast\nKnow the Sky. Plan Your Day.\n\nWeather: Open-Meteo · CC BY 4.0\nhttps://open-meteo.com/\nGeocoding: Open-Meteo / GeoNames\nMap: Natural Earth, public domain; equirectangular land silhouette.\nhttps://www.naturalearthdata.com/\n\nIcons: official OpenWeather hosted assets, fetched into memory when available. Original SkyCast illustrations are the offline fallback.\nhttps://openweathermap.org/weather-conditions\n\nCurrent conditions are model estimates. Local-day corrections and temperature conversions are performed by SkyCast. Map pins represent selected places only, not global live coverage.\n\nCity choices last only for this session. Favorites, persistent weather caching, speech, IP detection and the temperature trend chart are not implemented.\n\nEducational noncommercial API usage. Windows verification remains pending.",
+            "NOMOLI FORGE — SkyCast\nKnow the Sky. Plan Your Day.\n\nWeather: Open-Meteo · CC BY 4.0\nhttps://open-meteo.com/\nGeocoding: Open-Meteo / GeoNames\nMap: Natural Earth, public domain; equirectangular land silhouette.\nhttps://www.naturalearthdata.com/\n\nIcons: official OpenWeather hosted assets, fetched into memory when available. Original SkyCast illustrations are the offline fallback.\nhttps://openweathermap.org/weather-conditions\n\nCurrent conditions are model estimates. Local-day corrections and temperature conversions are performed by SkyCast. Map pins represent selected places only, not global live coverage.\n\nPinned city cards last for this session. Favorites and normalized weather cache are stored locally in SQLite. Voice runs locally on Windows only, after Listen is selected. IPWHOIS.IO approximate detection requires consent; no IP address is retained. Hourly temperature and solar times appear in expanded details.\n\nEducational noncommercial API usage. Windows verification remains pending.",
         )
 
     def close(self):
@@ -939,6 +956,7 @@ class SkyCastWindow(ctk.CTk):
                     self.after_cancel(ident)
                 except tk.TclError:
                     pass
+        self.enhancements.close()
         self.controller.close()
         if self.light_mode:
             self.set_theme(False)

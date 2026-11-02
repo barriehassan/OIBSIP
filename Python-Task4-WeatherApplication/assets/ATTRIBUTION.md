@@ -11,3 +11,9 @@
 ## Alignment revision artwork
 
 `app/ui/components/chrome.py` draws original interface symbols. The map exploration thumbnail is original canvas artwork in `global_map.py`; it is illustrative, not radar or satellite imagery. No avatar photograph or other artwork from the reference screenshot is redistributed. The S monogram represents SkyCast and opens About.
+
+## Task 05 services and libraries
+
+Optional approximate location: IPWHOIS.IO, https://ipwhois.io/documentation and https://ipwhois.io/terms . Requested only after explicit consent; approximate results require confirmation.
+
+Local Windows speech: pyttsx3 2.99, https://pypi.org/project/pyttsx3/2.99/ (MPL-2.0), using installed Windows SAPI5 voices. Installed through requirements, not bundled as modified library source or redistributed voice assets. Engine API: https://pyttsx3.readthedocs.io/en/latest/engine.html .
