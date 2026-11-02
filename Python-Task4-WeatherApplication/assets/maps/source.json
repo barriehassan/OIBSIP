@@ -1,0 +1,20 @@
+{
+  "source": "https://naturalearth.s3.amazonaws.com/110m_physical/ne_110m_land.zip",
+  "version": "4.1.0",
+  "download_sha256": "1926c621afd6ac67c3f36639bb1236134a48d82226dc675d3e3df53d02d2a3de",
+  "projection": "equirectangular",
+  "extent": [
+    -180,
+    -90,
+    180,
+    90
+  ],
+  "size": [
+    3072,
+    1536
+  ],
+  "license": "Public domain",
+  "terms": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "modification": "Rasterized and recolored for SkyCast; no political boundaries",
+  "asset_sha256": "22ec44f40d68baf8109f97053f8a45c13de8fadf7e1ea9f2c160ae607814ac84"
+}
