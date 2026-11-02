@@ -30,12 +30,12 @@ def font(size=14, bold=False):
     )
 
 
-def label(parent, text="", size=14, color=TEXT, bold=False, **kwargs):
+def label(parent, text="", size=14, color=None, bold=False, **kwargs):
     return ctk.CTkLabel(
         parent,
         text=text,
         font=font(size, bold),
-        text_color=color,
+        text_color=TEXT if color is None else color,
         height=kwargs.pop("height", 22),
         **kwargs
     )
@@ -54,6 +54,11 @@ class ActionButton(ctk.CTkButton):
         )
         self._canvas.bind("<FocusOut>", lambda event: self.configure(border_width=0))
 
+    def _create_grid(self):
+        super()._create_grid()
+        if not self._text:
+            self.grid_columnconfigure((0, 4), minsize=2)
+
     def focus_set(self):
         self._canvas.focus_set()
 
@@ -67,7 +72,7 @@ def button(parent, text, command, **kwargs):
         fg_color=kwargs.pop("fg_color", PANEL),
         hover_color=kwargs.pop("hover_color", "#34343b"),
         text_color=kwargs.pop("text_color", TEXT),
-        corner_radius=18,
-        height=34,
+        corner_radius=kwargs.pop("corner_radius", 18),
+        height=kwargs.pop("height", 34),
         **kwargs
     )

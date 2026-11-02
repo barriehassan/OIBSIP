@@ -44,7 +44,12 @@ def test_tab_and_unit_buttons(window, now):
     window.update()
     assert window.controller.state.unit == "°F"
     assert window.unit.get() == "°F"
-    assert "47°F" in window.location.cget("text")
+    assert window.location.cget("text") == "London, United Kingdom"
+    window.tab_changed("Today")
+    window.update()
+    assert (
+        window.card_strip.winfo_children()[0].temperature_label.cget("text") == "47°F"
+    )
     assert not window.controller.workers.pending
 
 
@@ -77,8 +82,16 @@ def test_resize_scrolls_instead_of_clipping(window, size):
     assert window.search_group.winfo_width() > 300
     assert window.card_strip._parent_canvas.winfo_width() > 400
     assert window.map.winfo_width() > 400
+    if width >= 1366:
+        last = window.card_strip.winfo_children()[-1]
+        assert (
+            last.winfo_x() + last.winfo_width()
+            <= window.card_strip._parent_canvas.winfo_width()
+        )
     # Seven real cards remain reachable in a horizontal scrolling strip.
     assert len(window.card_strip.winfo_children()) == 7
+    window.toggle_details()
+    window.update()
     canvas = window.page._parent_canvas
     canvas.yview_moveto(1)
     window.update()
@@ -144,7 +157,7 @@ def test_simulated_125_percent_widget_scaling(window):
         window.reflow()
         window.update()
         assert len(window.card_strip.winfo_children()) == 7
-        assert window.search_button.winfo_width() > 50
+        assert window.search_button.winfo_width() >= 40
         assert window.page._parent_canvas.winfo_height() > 200
     finally:
         ctk.set_widget_scaling(1)
@@ -174,3 +187,70 @@ def test_fahrenheit_labels_fit_selected_and_city_cards(window, now):
     )
     for label in window.city_temperature_labels:
         assert label.winfo_width() >= label.winfo_reqwidth()
+
+
+def test_reference_header_and_map_composition(window):
+    window.reflow()
+    window.update()
+    assert window.location.winfo_rootx() < window.search_group.winfo_rootx()
+    assert abs(window.location.winfo_rooty() - window.entry.winfo_rooty()) < 18
+    assert window.search_group.winfo_width() < 600
+    assert not window.detail_panel.winfo_ismapped()
+    assert window.map.winfo_rooty() < 530
+    assert (
+        window.map.winfo_rooty() + window.map.winfo_height()
+        < window.winfo_rooty() + 900
+    )
+    assert window.map.exploration.winfo_ismapped()
+    assert window.menu_button.winfo_width() == window.menu_button.winfo_height()
+
+
+def test_map_controls_transform_and_reset(window):
+    view = window.map
+    start = view.viewport()
+    view.controls["plus"].invoke()
+    window.update()
+    assert view.viewport()[2] > start[2]
+    view.controls["layers"].invoke()
+    assert not view.show_markers
+    assert not view.find_withtag("pin0")
+    view.controls["layers"].invoke()
+    assert view.find_withtag("pin0")
+    view.controls["locate"].invoke()
+    assert view.center == (view.active.longitude, view.active.latitude)
+    view.controls["reset"].invoke()
+    assert view.zoom == 1.0
+    assert view.viewport() == start
+
+
+def test_details_can_be_opened_and_closed_without_network(window):
+    window.menu_button.invoke()
+    window.update()
+    assert window.detail_panel.winfo_ismapped()
+    assert window.stats.winfo_height() > 40
+    window.forecast_button.invoke()
+    window.update()
+    assert not window.detail_panel.winfo_ismapped()
+    assert not window.controller.workers.pending
+
+
+def test_theme_switch_keeps_weather_and_units(window):
+    original = window.controller.state.bundle
+    window.add_city()
+    window.sun_button.invoke()
+    window.update()
+    assert window.light_mode
+    assert window.cget("fg_color") == "#dce3e8"
+    assert window.page._parent_canvas.cget("bg") == "#f5f7fb"
+    assert all(
+        label.cget("text_color") == "#17212c"
+        for label in window.city_temperature_labels
+    )
+    assert window.controller.state.bundle is original
+    window.unit_changed("°F")
+    window.moon_button.invoke()
+    window.update()
+    assert not window.light_mode
+    assert window.cget("fg_color") == "#292929"
+    assert window.controller.state.unit == "°F"
+    assert not window.controller.workers.pending

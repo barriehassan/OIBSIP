@@ -7,3 +7,7 @@
 - **Fallback weather illustrations:** Original procedural Pillow artwork in `app/ui/components/weather_icon.py`, created for SkyCast in Task 04. Used when hosted icons are unavailable or still loading; not represented as OpenWeather artwork. Map badges use these local illustrations. Text preserves the actual condition.
 - **Brand:** Text-only NOMOLI FORGE / SkyCast identity; no new final company logo is asserted.
 - **Mockup:** User-supplied design reference only. Its full screenshot, avatar, weather artwork and promotional photo are not redistributed as application assets.
+
+## Alignment revision artwork
+
+`app/ui/components/chrome.py` draws original interface symbols. The map exploration thumbnail is original canvas artwork in `global_map.py`; it is illustrative, not radar or satellite imagery. No avatar photograph or other artwork from the reference screenshot is redistributed. The S monogram represents SkyCast and opens About.

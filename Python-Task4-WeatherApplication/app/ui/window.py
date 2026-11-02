@@ -19,6 +19,7 @@ from .components.forecast import ForecastCard, HourlyStrip, StatCard
 from .components.rain_chart import RainChart
 from .components.global_map import GlobalMap
 from .components.weather_icon import IconImages, fetch_icons, VALID_IDS
+from .components.chrome import symbol
 
 
 class SkyCastWindow(ctk.CTk):
@@ -45,113 +46,177 @@ class SkyCastWindow(ctk.CTk):
         self.last_width = 0
         self.closed = False
         self.protocol("WM_DELETE_WINDOW", self.close)
-        self.shell = ctk.CTkFrame(self, fg_color=t.BG, corner_radius=32)
-        self.shell.pack(fill="both", expand=True, padx=22, pady=20)
+        self.details_visible = False
+        self.light_mode = False
+        self.shell = ctk.CTkFrame(self, fg_color=t.BG, corner_radius=42)
+        self.shell.pack(fill="both", expand=True, padx=60, pady=60)
         self.header = ctk.CTkFrame(self.shell, fg_color="transparent")
-        self.header.pack(fill="x", padx=26, pady=(18, 4))
+        self.header.pack(fill="x", padx=32, pady=(20, 20))
+        self.header.columnconfigure(0, minsize=380)
         self.header.columnconfigure(1, weight=1)
-        identity = ctk.CTkFrame(self.header, fg_color="transparent")
-        identity.grid(row=0, column=0, sticky="w", padx=(0, 20))
-        t.button(identity, "S", self.about, width=38, fg_color=t.PANEL).pack(
-            side="left", padx=(0, 9)
+        self.header.columnconfigure(2, minsize=290)
+        self.identity = ctk.CTkFrame(self.header, fg_color="transparent")
+        self.identity.grid(row=0, column=0, sticky="w", padx=(0, 24))
+        self.menu_button = self.icon_button(self.identity, "grid", self.toggle_details)
+        self.menu_button.pack(side="left", padx=(0, 14))
+        self.notifications_button = self.icon_button(
+            self.identity, "bell", self.notifications
         )
-        brand = ctk.CTkFrame(identity, fg_color="transparent")
-        brand.pack(side="left")
-        t.label(brand, "SkyCast", size=18, bold=True).pack(anchor="w")
-        t.label(brand, "NOMOLI FORGE", size=10, color=t.MUTED).pack(anchor="w")
+        self.notifications_button.pack(side="left", padx=(0, 22))
+        self.pin_icon = ctk.CTkLabel(
+            self.identity, text="", image=symbol("pin", t.TEXT, 22), width=22
+        )
+        self.pin_icon.pack(side="left", padx=(0, 10))
+        self.location = t.label(
+            self.identity, "Choose a city", size=13, anchor="w", width=174
+        )
+        self.location.pack(side="left")
         self.search_group = ctk.CTkFrame(
-            self.header, fg_color="#202023", corner_radius=24
+            self.header, fg_color=t.PANEL, corner_radius=24, width=480, height=40
         )
-        self.search_group.grid(row=0, column=1, sticky="ew", padx=(0, 18))
+        self.search_group.grid(row=0, column=1, sticky="w")
+        self.search_group.pack_propagate(False)
+        self.search_button = t.button(
+            self.search_group,
+            "",
+            self.search,
+            width=36,
+            image=symbol("search", t.MUTED, 20),
+        )
+        self.search_button.pack(side="left", padx=(10, 0))
         self.entry = ctk.CTkEntry(
             self.search_group,
-            placeholder_text="Search city, country or postal code…",
+            placeholder_text="Search city…",
             border_width=0,
             fg_color="transparent",
             height=40,
             font=t.font(14),
         )
-        self.entry.pack(side="left", fill="x", expand=True, padx=(14, 0), pady=3)
-        self.search_button = t.button(
-            self.search_group, "Search", self.search, width=76
-        )
-        self.search_button.pack(side="right", padx=5)
+        self.entry.pack(side="left", fill="x", expand=True, padx=(0, 12))
         self.entry.bind("<Return>", lambda e: self.search())
         self.entry.bind("<KeyRelease>", self.edited)
-        self.utilities = ctk.CTkFrame(self.header, fg_color="transparent")
-        self.utilities.grid(row=0, column=2, sticky="e")
-        self.unit = ctk.CTkSegmentedButton(
+        self.utilities = ctk.CTkFrame(self.header, fg_color="transparent", width=220)
+        self.utilities.grid(row=0, column=2, sticky="e", padx=(28, 0))
+        self.sun_button = self.icon_button(
+            self.utilities, "sun", lambda: self.set_theme(True)
+        )
+        self.sun_button.pack(side="left", padx=(0, 8))
+        self.moon_button = self.icon_button(
+            self.utilities, "moon", lambda: self.set_theme(False), selected=True
+        )
+        self.moon_button.pack(side="left", padx=(0, 22))
+        self.profile_button = t.button(
             self.utilities,
-            values=["°C", "°F"],
-            command=self.unit_changed,
-            selected_color=t.SELECTED,
-            selected_hover_color="#a7cbe6",
-            unselected_color="#a6a6af",
-            unselected_hover_color="#b6b6bf",
-            text_color=t.INK,
-            text_color_disabled=t.MUTED,
-            font=t.font(14),
-            width=110,
-            height=36,
+            "S",
+            self.about,
+            width=42,
+            height=42,
+            fg_color="#37312a",
+            text_color="#f0d9b1",
         )
-        self.unit.set("°C")
-        self.unit.pack(side="left", padx=(0, 10))
-        self.refresh_button = t.button(
-            self.utilities, "Refresh", self.refresh, width=76
-        )
-        self.refresh_button.pack(side="left")
-        self.location = t.label(
-            self.shell,
-            "Know the Sky. Plan Your Day.",
-            size=13,
-            color=t.MUTED,
-            anchor="w",
-            wraplength=1200,
-            justify="left",
-        )
-        self.location.pack(fill="x", padx=29, pady=(0, 2))
-        status_row = ctk.CTkFrame(self.shell, fg_color="transparent")
-        status_row.pack(fill="x", padx=28)
-        self.status = t.label(status_row, "", size=12, color=t.MUTED, anchor="w")
+        self.profile_button.pack(side="left")
+        # Errors remain visible; routine retrieval details are in the bell panel.
+        self.status_row = ctk.CTkFrame(self.shell, fg_color="transparent")
+        self.status = t.label(self.status_row, "", size=12, color=t.MUTED, anchor="w")
         self.status.pack(side="left", fill="x", expand=True)
-        self.retry_button = t.button(status_row, "Retry", self.retry, width=62)
+        self.retry_button = t.button(self.status_row, "Retry", self.retry, width=62)
         self.retry_button.pack(side="right", padx=(6, 0))
-        self.cancel_button = t.button(status_row, "Cancel", self.cancel, width=62)
+        self.cancel_button = t.button(self.status_row, "Cancel", self.cancel, width=62)
         self.cancel_button.pack(side="right")
         self.page = ctk.CTkScrollableFrame(
             self.shell,
             fg_color="transparent",
             corner_radius=0,
-            scrollbar_button_color="#38383f",
+            scrollbar_button_color=t.BG,
+            scrollbar_button_hover_color=t.PANEL,
         )
-        self.page.pack(fill="both", expand=True, padx=18, pady=(2, 12))
+        self.page.pack(fill="both", expand=True, padx=26, pady=(0, 22))
         self.page.columnconfigure(0, weight=1)
-        self.page.columnconfigure(1, weight=0, minsize=300)
+        self.page.columnconfigure(1, weight=0, minsize=280)
         tabs = ctk.CTkFrame(self.page, fg_color="transparent")
-        tabs.grid(row=0, column=0, sticky="ew", pady=(3, 6))
+        tabs.grid(row=0, column=0, sticky="ew", pady=(0, 28))
         self.tab_buttons = {}
         for name in ("Today", "Tomorrow", "Next 7 Days"):
-            b = t.button(
-                tabs, name, lambda n=name: self.tab_changed(n), width=110, fg_color=t.BG
+            button = t.button(
+                tabs,
+                name,
+                lambda n=name: self.tab_changed(n),
+                width=95 if name != "Next 7 Days" else 132,
+                fg_color=t.BG,
             )
-            b.pack(side="left", padx=(0, 8))
-            self.tab_buttons[name] = b
+            button.pack(side="left", padx=(0, 4))
+            self.tab_buttons[name] = button
+        self.forecast_mode = ctk.CTkFrame(tabs, fg_color=t.PANEL, corner_radius=18)
+        self.forecast_mode.pack(side="right")
+        self.forecast_button = t.button(
+            self.forecast_mode,
+            "Forecast",
+            self.toggle_details,
+            width=102,
+            fg_color=t.SELECTED,
+            text_color=t.INK,
+            height=30,
+        )
+        self.forecast_button.pack(side="left")
+        self.air_button = t.button(
+            self.forecast_mode, "Air quality", self.air_quality, width=94, height=30
+        )
+        self.air_button.pack(side="left")
         t.label(self.page, "Chance of rain", size=18).grid(
-            row=0, column=1, sticky="w", padx=(26, 0), pady=(3, 6)
+            row=0, column=1, sticky="w", padx=(30, 0), pady=(0, 28)
         )
         self.card_strip = ctk.CTkScrollableFrame(
             self.page,
             orientation="horizontal",
-            height=218,
+            height=201,
             fg_color="transparent",
             corner_radius=0,
-            scrollbar_button_color="#35353b",
+            scrollbar_button_color=t.PANEL,
         )
         self.card_strip.grid(row=1, column=0, sticky="ew")
         self.rain = RainChart(self.page)
-        self.rain.grid(row=1, column=1, sticky="nsew", padx=(24, 4), pady=(0, 12))
-        hourly_head = ctk.CTkFrame(self.page, fg_color="transparent")
-        hourly_head.grid(row=2, column=0, sticky="ew", pady=(3, 0))
+        self.rain.grid(row=1, column=1, sticky="nsew", padx=(30, 0))
+        map_head = ctk.CTkFrame(self.page, fg_color="transparent")
+        map_head.grid(row=2, column=0, sticky="ew", pady=(18, 18))
+        t.label(map_head, "Global map", size=20).pack(side="left")
+        t.button(map_head, "View wide", self.wide_map, width=112, height=30).pack(
+            side="right"
+        )
+        city_head = ctk.CTkFrame(self.page, fg_color="transparent")
+        city_head.grid(row=2, column=1, sticky="ew", padx=(30, 0), pady=(18, 18))
+        t.label(city_head, "Other large cities", size=18).pack(side="left")
+        self.map_frame = ctk.CTkFrame(self.page, fg_color=t.MAP, corner_radius=26)
+        self.map_frame.grid(row=3, column=0, sticky="nsew")
+        self.map = GlobalMap(self.map_frame, self.choose, explore=self.map_help)
+        self.map.pack(fill="both", expand=True, padx=8, pady=8)
+        self.cities = ctk.CTkFrame(self.page, fg_color="transparent")
+        self.cities.grid(row=3, column=1, sticky="nsew", padx=(30, 0))
+        # Secondary controls do not displace the two-row reference composition.
+        self.detail_panel = ctk.CTkFrame(self.page, fg_color="transparent")
+        self.detail_panel.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        toolbar = ctk.CTkFrame(self.detail_panel, fg_color="transparent")
+        toolbar.pack(fill="x", pady=(0, 10))
+        t.label(toolbar, "Forecast details", size=18).pack(side="left")
+        self.unit = ctk.CTkSegmentedButton(
+            toolbar,
+            values=["°C", "°F"],
+            command=self.unit_changed,
+            selected_color=t.SELECTED,
+            text_color=t.INK,
+            unselected_color="#a6a6af",
+            width=90,
+        )
+        self.unit.set("°C")
+        self.unit.pack(side="right", padx=10)
+        self.refresh_button = t.button(toolbar, "Refresh", self.refresh, width=80)
+        self.refresh_button.pack(side="right")
+        self.add_button = t.button(
+            toolbar, "+ Add current city", self.add_city, width=142
+        )
+        self.add_button.pack(side="right", padx=10)
+        t.button(toolbar, "Full report", self.details, width=95).pack(side="right")
+        hourly_head = ctk.CTkFrame(self.detail_panel, fg_color="transparent")
+        hourly_head.pack(fill="x")
         self.hour_label = t.label(hourly_head, "Next six hours", size=12, color=t.MUTED)
         self.hour_label.pack(side="left")
         self.next_button = t.button(
@@ -162,46 +227,23 @@ class SkyCastWindow(ctk.CTk):
             hourly_head, "Previous", lambda: self.move_hours(-1), width=66
         )
         self.prev_button.pack(side="right", padx=5)
-        t.button(self.page, "Forecast details", self.details, width=120).grid(
-            row=2, column=1, sticky="e", padx=4
-        )
-        self.hourly = HourlyStrip(self.page)
-        self.hourly.grid(row=3, column=0, sticky="ew", pady=(0, 5))
+        self.hourly = HourlyStrip(self.detail_panel)
+        self.hourly.pack(fill="x")
         self.rain_note = t.label(
-            self.page,
+            self.detail_panel,
             "Probability, not rainfall amount",
             size=12,
             color=t.MUTED,
-            wraplength=235,
         )
-        self.rain_note.grid(row=3, column=1, padx=(24, 0), sticky="n", pady=12)
-        map_head = ctk.CTkFrame(self.page, fg_color="transparent")
-        map_head.grid(row=4, column=0, sticky="ew", pady=(7, 10))
-        t.label(map_head, "Global map", size=20).pack(side="left")
-        t.button(map_head, "View wide", self.wide_map, width=105).pack(side="right")
-        t.label(self.page, "Other large cities", size=18).grid(
-            row=4, column=1, sticky="w", padx=(26, 0), pady=(7, 10)
-        )
-        self.map_frame = ctk.CTkFrame(self.page, fg_color=t.MAP, corner_radius=24)
-        self.map_frame.grid(row=5, column=0, sticky="nsew")
-        self.map = GlobalMap(self.map_frame, self.choose)
-        self.map.pack(fill="both", expand=True, padx=12, pady=12)
-        self.cities = ctk.CTkFrame(self.page, fg_color="transparent")
-        self.cities.grid(row=5, column=1, sticky="nsew", padx=(24, 0))
-        stat_head = ctk.CTkFrame(self.page, fg_color="transparent")
-        stat_head.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(10, 5))
+        self.rain_note.pack(anchor="w")
         self.stats_caption = t.label(
-            stat_head, "Current conditions", size=12, color=t.MUTED
+            self.detail_panel, "Current conditions", size=12, color=t.MUTED
         )
-        self.stats_caption.pack(side="left")
-        self.add_button = t.button(
-            stat_head, "+ Add current city", self.add_city, width=135
-        )
-        self.add_button.pack(side="right")
-        self.stats = ctk.CTkFrame(self.page, fg_color="transparent")
-        self.stats.grid(row=7, column=0, columnspan=2, sticky="ew")
-        footer = ctk.CTkFrame(self.page, fg_color="transparent")
-        footer.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        self.stats_caption.pack(anchor="w", pady=(12, 6))
+        self.stats = ctk.CTkFrame(self.detail_panel, fg_color="transparent")
+        self.stats.pack(fill="x")
+        footer = ctk.CTkFrame(self.detail_panel, fg_color="transparent")
+        footer.pack(fill="x", pady=(12, 0))
         t.button(
             footer,
             "Weather: Open-Meteo",
@@ -218,6 +260,7 @@ class SkyCastWindow(ctk.CTk):
         t.button(footer, "About & sources", self.about, width=120, fg_color=t.BG).pack(
             side="right"
         )
+        self.detail_panel.grid_remove()
         self.bind("<Control-l>", lambda event: self.entry.focus_set())
         self.bind("<Control-u>", lambda event: self.toggle_unit())
         self.bind("<Configure>", self.resized)
@@ -225,6 +268,120 @@ class SkyCastWindow(ctk.CTk):
         self.render()
         self.poll_id = self.after(80, self.poll)
         self.minute_id = self.after(60000, self.minute)
+
+    def icon_button(self, parent, name, command, selected=False):
+        return t.button(
+            parent,
+            "",
+            command,
+            width=42,
+            height=42,
+            corner_radius=21,
+            fg_color=t.SELECTED if selected else t.PANEL,
+            image=symbol(name, t.INK if selected else t.TEXT, 22),
+        )
+
+    def toggle_details(self):
+        self.details_visible = not self.details_visible
+        if self.details_visible:
+            self.detail_panel.grid()
+            self.after_idle(lambda: self.page._parent_canvas.yview_moveto(1))
+        else:
+            self.detail_panel.grid_remove()
+            self.page._parent_canvas.yview_moveto(0)
+
+    def notifications(self):
+        state = self.controller.state
+        message = state.status or "No new activity. Search for a city to get started."
+        if state.bundle:
+            b = state.bundle
+            message += (
+                f"\n\n{location_label(b.location)}\nCurrent {temperature(b.current.temperature_c, state.unit)} · {b.current.description}"
+                f"\nObserved: {local_hour(b.current.observed_at, b.timezone)}"
+                f"\nDownloaded: {local_hour(b.retrieved_at, b.timezone)}"
+            )
+        self.text_dialog(
+            "Activity · SkyCast",
+            message
+            + "\n\nThis panel shows search and retrieval activity, not weather alerts.",
+        )
+
+    def air_quality(self):
+        self.text_dialog(
+            "Air quality",
+            "Air-quality data is not available from the connected weather provider.\n\nNo air-quality reading or health rating is shown. Use Forecast for available weather data.",
+        )
+
+    def map_help(self):
+        self.text_dialog(
+            "Explore the map",
+            "Search a city to see its weather on the map.\n\nUse the grid menu or Forecast button to open details and add up to three cities.\n\nDrag to pan, use + / − to zoom, reset to return to the overview, layers to show or hide markers, and locate to center the active city.\n\nThe map shows land and your selected locations. Wind fields, ocean conditions and radar layers are not available.",
+        )
+
+    def set_theme(self, light):
+        if light == self.light_mode:
+            return
+        self.light_mode = light
+        dark = {
+            "OUTER": "#292929",
+            "BG": "#111015",
+            "PANEL": "#1c1c1f",
+            "TEXT": "#f5f5f7",
+            "MUTED": "#aeacb8",
+            "MAP": "#19191b",
+        }
+        bright = {
+            "OUTER": "#dce3e8",
+            "BG": "#f5f7fb",
+            "PANEL": "#e4e9ef",
+            "TEXT": "#17212c",
+            "MUTED": "#526071",
+            "MAP": "#19191b",
+        }
+        before, after = (dark, bright) if light else (bright, dark)
+        mapping = {before[k]: after[k] for k in before if before[k] != after[k]}
+        for key, value in after.items():
+            setattr(t, key, value)
+
+        def recolor(widget):
+            # Only palette colors change; map artwork and blue-card ink stay fixed.
+            if widget is self.map:
+                return
+            if isinstance(widget, ctk.CTkBaseClass) or widget is self:
+                for option in (
+                    "fg_color",
+                    "bg_color",
+                    "text_color",
+                    "scrollbar_button_color",
+                ):
+                    try:
+                        old = widget.cget(option)
+                        if isinstance(old, str) and old in mapping:
+                            widget.configure(**{option: mapping[old]})
+                    except (ValueError, tk.TclError, AttributeError):
+                        pass
+            for child in widget.winfo_children():
+                recolor(child)
+
+        recolor(self)
+        self.page.configure(fg_color=t.BG)
+        self.card_strip.configure(fg_color=t.BG)
+        self.hourly.slots.configure(fg_color=t.BG)
+        self.entry.configure(placeholder_text_color=t.MUTED)
+        self.search_button.configure(image=symbol("search", t.MUTED, 20))
+        self.rain.configure(bg=t.BG)
+        for button, name, selected in (
+            (self.sun_button, "sun", light),
+            (self.moon_button, "moon", not light),
+        ):
+            button.configure(
+                fg_color=t.SELECTED if selected else t.PANEL,
+                image=symbol(name, t.INK if selected else t.TEXT, 22),
+            )
+        self.menu_button.configure(image=symbol("grid", t.TEXT, 22))
+        self.notifications_button.configure(image=symbol("bell", t.TEXT, 22))
+        self.pin_icon.configure(image=symbol("pin", t.TEXT, 22))
+        self.render()
 
     def edited(self, event):
         if event.keysym in (
@@ -344,18 +501,30 @@ class SkyCastWindow(ctk.CTk):
     def reflow(self):
         self.resize_id = None
         compact = self.winfo_width() < 1150
-        self.search_group.grid_forget()
-        self.search_group.grid(
-            row=1 if compact else 0,
-            column=0 if compact else 1,
-            columnspan=3 if compact else 1,
-            sticky="ew",
-            padx=0 if compact else (0, 18),
-            pady=(8, 0) if compact else 0,
+        self.shell.pack_configure(
+            padx=24 if compact else 60, pady=20 if self.winfo_height() < 820 else 60
         )
-        self.page.columnconfigure(1, minsize=232 if compact else 300)
-        self.location.configure(wraplength=max(650, self.winfo_width() - 120))
-        self.status.configure(wraplength=max(550, self.winfo_width() - 300))
+        self.header.pack_configure(
+            padx=24 if compact else 32,
+            pady=(16, 8) if self.winfo_height() < 820 else (20, 20),
+        )
+        self.identity.grid_configure(padx=(0, 12 if compact else 24))
+        self.location.configure(
+            width=126 if compact else 174, wraplength=126 if compact else 174
+        )
+        self.utilities.grid_configure(padx=(12 if compact else 28, 0))
+        self.header.columnconfigure(0, minsize=300 if compact else 380)
+        self.header.columnconfigure(2, minsize=170 if compact else 240)
+        self.search_group.configure(
+            width=310 if compact else min(480, self.winfo_width() - 880)
+        )
+        self.page.columnconfigure(1, minsize=250 if compact else 280)
+        self.forecast_mode.pack_forget()
+        if not compact:
+            self.forecast_mode.pack(side="right")
+        self.map.configure(height=272 if self.winfo_height() < 820 else 306)
+        self.status.configure(wraplength=max(500, self.winfo_width() - 350))
+        self.update_idletasks()
         self.render()
 
     def render_status(self):
@@ -368,6 +537,12 @@ class SkyCastWindow(ctk.CTk):
         self.status.configure(
             text=s.status + previous, text_color=t.ERROR if s.failed else t.MUTED
         )
+        if s.loading or s.failed or s.candidates:
+            self.status_row.pack(
+                fill="x", padx=32, pady=(0, 6), before=self.page._parent_frame
+            )
+        else:
+            self.status_row.pack_forget()
         self.cancel_button.configure(
             state="normal" if s.loading or s.candidates else "disabled"
         )
@@ -397,7 +572,7 @@ class SkyCastWindow(ctk.CTk):
         for child in self.stats.winfo_children():
             child.destroy()
         if not b:
-            self.location.configure(text="Know the Sky. Plan Your Day.")
+            self.location.configure(text="Choose a city")
             t.label(
                 self.card_strip,
                 "Your forecast starts here.\nSearch a city, country or supported postal code.",
@@ -413,16 +588,18 @@ class SkyCastWindow(ctk.CTk):
         else:
             self.add_button.configure(state="normal")
             tz = ZoneInfo(b.timezone)
-            self.location.configure(
-                text=f"{location_label(b.location)}  ·  Current {temperature(b.current.temperature_c,s.unit)}  {b.current.description}  ·  As of {b.current.observed_at.astimezone(tz):%H:%M %Z}"
-            )
+            self.location.configure(text=f"{b.location.name}, {b.location.country}")
             slots = day_slots(b, now)
             today = local_today(b, now)
             if s.selected_date not in [d for d, _ in slots]:
                 s.selected_date = today
-            available = max(880, self.card_strip._parent_canvas.winfo_width() - 12)
-            selected_width = 230
-            small_width = max(94, int((available - selected_width - 60) / 6))
+            available = max(600, self.card_strip._parent_canvas.winfo_width() - 8)
+            selected_width = 208
+            small_width = max(78, int((available - selected_width - 60) / 6))
+            if selected_width + 6 * small_width + 60 <= available:
+                self.card_strip._scrollbar.grid_remove()
+            else:
+                self.card_strip._scrollbar.grid()
             for i, (date, data) in enumerate(slots):
                 selected = date == s.selected_date
                 card = ForecastCard(
@@ -435,6 +612,13 @@ class SkyCastWindow(ctk.CTk):
                     unit=s.unit,
                     command=lambda d=date: self.select_day(d),
                     width=selected_width if selected else small_width,
+                    observed_time=(
+                        b.current.observed_at.astimezone(tz)
+                        .strftime("%I:%M %p")
+                        .lstrip("0")
+                        if selected and date == today
+                        else None
+                    ),
                 )
                 card.grid(row=0, column=i, padx=(0, 10))
                 card.select.bind(
@@ -529,59 +713,89 @@ class SkyCastWindow(ctk.CTk):
                 )
             return
         for loc, result in s.cities.items():
-            frame = ctk.CTkFrame(self.cities, fg_color=t.PANEL, corner_radius=22)
+            frame = ctk.CTkFrame(
+                self.cities,
+                fg_color=t.PANEL,
+                corner_radius=24,
+                height=90 if self.winfo_height() < 820 else 98,
+            )
             frame.pack(fill="x", pady=(0, 8))
+            frame.pack_propagate(False)
             current = result.weather.current if result.weather else None
-            top = ctk.CTkFrame(frame, fg_color="transparent")
-            top.pack(fill="x", padx=12, pady=(6, 0))
-            name = t.button(top, loc.name, lambda l=loc: self.choose(l), width=125)
-            name.pack(side="left")
-            t.button(top, "×", lambda l=loc: self.remove_city(l), width=24).pack(
-                side="right"
-            )
-            body = ctk.CTkFrame(frame, fg_color="transparent")
-            body.pack(fill="x", padx=16)
-            body.columnconfigure(0, weight=1)
+            left = ctk.CTkFrame(frame, fg_color="transparent")
+            left.pack(side="left", fill="both", expand=True, padx=(18, 4), pady=10)
             t.label(
-                body, loc.country, size=12, color=t.MUTED, wraplength=80, justify="left"
-            ).grid(row=0, column=0, sticky="w")
-            ctk.CTkLabel(
-                body,
-                text="",
-                image=self.icons.image(current.icon_id if current else "unknown", 30),
-            ).grid(row=0, column=1, padx=4)
-            reading = t.label(
-                body,
-                temperature(current.temperature_c, s.unit) if current else "—",
-                size=22,
-                bold=True,
+                left, loc.country, size=10, color=t.MUTED, anchor="w", height=15
+            ).pack(fill="x")
+            name = t.button(
+                left,
+                loc.name,
+                lambda l=loc: self.choose(l),
+                width=90,
+                height=27,
+                anchor="w",
             )
-            reading.grid(row=0, column=2, sticky="e")
-            self.city_temperature_labels.append(reading)
+            name.configure(font=t.font(16))
+            name.pack(fill="x")
             detail = (
                 "Updating…"
                 if loc in s.city_loading
                 else (
-                    "Previous data · retry"
-                    if result.error and current
-                    else (
-                        "Unavailable · retry"
-                        if result.error
-                        else current.description if current else "Unavailable"
-                    )
+                    "Retry needed"
+                    if result.error
+                    else current.description if current else "Unavailable"
                 )
             )
-            bottom = ctk.CTkFrame(frame, fg_color="transparent")
-            bottom.pack(fill="x", padx=12, pady=(0, 4))
             t.label(
-                bottom, detail, size=12, color=t.ERROR if result.error else t.MUTED
-            ).pack(side="left")
-            t.button(
-                bottom,
-                "Retry" if result.error else "Update",
-                lambda l=loc: self.refresh_city(l),
-                width=54,
-            ).pack(side="right")
+                left,
+                detail,
+                size=11,
+                color=t.ERROR if result.error else t.MUTED,
+                anchor="w",
+                wraplength=145,
+            ).pack(fill="x", pady=(4, 0))
+            right = ctk.CTkFrame(frame, fg_color="transparent", width=64)
+            right.pack(side="right", padx=(0, 14), pady=6)
+            icon = ctk.CTkLabel(
+                right,
+                text="",
+                image=self.icons.image(current.icon_id if current else "unknown", 43),
+                height=43,
+            )
+            icon.pack()
+            reading = t.label(
+                right,
+                temperature(current.temperature_c, s.unit) if current else "—",
+                size=21,
+                bold=True,
+            )
+            reading.pack()
+            self.city_temperature_labels.append(reading)
+            # Context actions leave the compact country / city / condition layout clear.
+            for widget in (frame, name, icon, reading):
+                widget.bind("<Button-3>", lambda e, l=loc: self.city_actions(l))
+            name.bind("<Shift-F10>", lambda e, l=loc: self.city_actions(l))
+
+    def city_actions(self, location):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(location.name)
+        dialog.geometry("360x220")
+        dialog.transient(self)
+        t.label(dialog, location_label(location), wraplength=320).pack(pady=18)
+
+        def action(callback):
+            dialog.destroy()
+            callback(location)
+
+        for label, callback in (
+            ("View weather", self.choose),
+            ("Update weather", self.refresh_city),
+            ("Remove city", self.remove_city),
+        ):
+            t.button(dialog, label, lambda c=callback: action(c), width=200).pack(
+                pady=5
+            )
+        dialog.bind("<Escape>", lambda e: dialog.destroy())
 
     def markers(self):
         s = self.controller.state
@@ -702,7 +916,7 @@ class SkyCastWindow(ctk.CTk):
         dialog.title("Global map · selected locations")
         dialog.geometry("1040x600")
         dialog.transient(self)
-        view = GlobalMap(dialog, self.choose)
+        view = GlobalMap(dialog, self.choose, explore=self.map_help)
         view.pack(fill="both", expand=True, padx=20, pady=20)
         b = self.controller.state.bundle
         view.set_markers(self.markers(), b.location if b else None)
@@ -726,4 +940,6 @@ class SkyCastWindow(ctk.CTk):
                 except tk.TclError:
                     pass
         self.controller.close()
+        if self.light_mode:
+            self.set_theme(False)
         self.destroy()

@@ -89,6 +89,17 @@ def run(output, live=False):
     for b in bundles:
         controller.state.cities[b.location] = LocationWeatherResult(b.location, b)
     app = SkyCastWindow(controller, remote_icons=live)
+    if not live:
+        from app.ui import theme
+
+        badge = theme.label(
+            app,
+            "OFFLINE TEST FIXTURE · synthetic weather · not live",
+            size=11,
+            color="#14151b",
+            fg_color="#bdd7ec",
+        )
+        badge.place(relx=1, rely=1, x=-10, y=-5, anchor="se")
     errors = []
     app.report_callback_exception = lambda *args: errors.append(str(args))
 
@@ -111,11 +122,13 @@ def run(output, live=False):
 
     try:
         app.geometry("1440x900+0+0")
-        settle(2)
+        settle(15 if live else 2)
         capture("SkyCast_Task04_1440x900.png")
+        app.toggle_details()
         app.page._parent_canvas.yview_moveto(1)
         settle()
         capture("SkyCast_Task04_Map_Stats.png")
+        app.toggle_details()
         app.page._parent_canvas.yview_moveto(0)
         app.tab_changed("Tomorrow")
         app.unit_changed("°F")
@@ -123,6 +136,10 @@ def run(output, live=False):
         capture("SkyCast_Task04_Tomorrow_F.png")
         app.tab_changed("Today")
         app.unit_changed("°C")
+        app.set_theme(True)
+        settle()
+        capture("SkyCast_Task04_Light.png")
+        app.set_theme(False)
         for width, height in [(1366, 768), (1024, 700)]:
             app.geometry(f"{width}x{height}+0+0")
             settle()

@@ -6,104 +6,129 @@ from app.ui.presentation import temperature
 
 class ForecastCard(ctk.CTkFrame):
     def __init__(
-        self, parent, icons, date, data, *, selected, current, unit, command, width
+        self,
+        parent,
+        icons,
+        date,
+        data,
+        *,
+        selected,
+        current,
+        unit,
+        command,
+        width,
+        observed_time=None,
     ):
         super().__init__(
             parent,
             width=width,
-            height=207,
+            height=198,
             corner_radius=25,
             fg_color=t.SELECTED if selected else t.PANEL,
         )
-        self.grid_propagate(False)
-        self.columnconfigure(0, weight=1)
+        self.pack_propagate(False)
         ink = t.INK if selected else t.TEXT
         secondary = "#35404a" if selected else t.MUTED
         title = date.strftime("%A" if selected else "%a")
-        self.select = t.button(
+        header = ctk.CTkFrame(
             self,
+            fg_color="#a8ccdc" if selected else t.PANEL,
+            bg_color=t.BG,
+            background_corner_colors=(
+                t.BG,
+                t.BG,
+                t.SELECTED if selected else t.PANEL,
+                t.SELECTED if selected else t.PANEL,
+            ),
+            corner_radius=22,
+            height=48,
+        )
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        self.select = t.button(
+            header,
             title,
             command,
-            width=width - 18,
-            fg_color=t.SELECTED if selected else t.PANEL,
+            width=88 if selected else width - 24,
+            corner_radius=8,
+            fg_color="#a8ccdc" if selected else t.PANEL,
             hover_color="#a9cbe4" if selected else "#34343b",
             text_color=ink,
+            height=32,
         )
-        self.select.grid(row=0, column=0, padx=8, pady=(8, 0))
-        self.select.bind("<Return>", lambda e: command())
-        self.select.bind("<space>", lambda e: command())
-        t.label(
-            self,
-            date.strftime("%d %b") + (" · high" if not selected else ""),
-            size=12,
-            color=secondary,
-            height=18,
-        ).grid(row=1, column=0)
+        self.select.pack(side="left", padx=(10, 0), pady=8)
+        if selected:
+            t.label(
+                header, observed_time or date.strftime("%d %b"), size=12, color=ink
+            ).pack(side="right", padx=(0, 12))
         icon = current.icon_id if current else data.icon_id if data else "unknown"
         if selected:
             middle = ctk.CTkFrame(self, fg_color="transparent")
-            middle.grid(row=2, column=0, sticky="ew", padx=12)
+            middle.pack(fill="x", padx=12, pady=(5, 0))
             value = (
                 current.temperature_c
                 if current
                 else data.temperature_max_c if data else None
             )
             self.temperature_label = t.label(
-                middle, temperature(value, unit), size=32, bold=True, color=ink
+                middle, temperature(value, unit), size=30, bold=True, color=ink
             )
             self.temperature_label.pack(side="left")
-            ctk.CTkLabel(middle, text="", image=icons.image(icon, 60)).pack(
+            ctk.CTkLabel(middle, text="", image=icons.image(icon, 62)).pack(
                 side="right"
             )
-            basis = "Now · current estimate" if current else "Forecast high"
-            t.label(self, basis, size=12, color=secondary, height=18).grid(
-                row=3, column=0
-            )
-            description = (
-                current.description
-                if current
-                else data.description if data else "Unavailable"
-            )
-            t.label(
-                self, description, size=13, color=ink, wraplength=width - 20, height=20
-            ).grid(row=4, column=0, padx=8)
-            detail = (
-                f"Humidity {current.humidity_percent:g}%  ·  Wind {current.wind_speed_kmh:g} km/h"
-                if current
-                else (
-                    "Low " + temperature(data.temperature_min_c, unit)
+            if current:
+                detail = (
+                    f"Humidity  {current.humidity_percent:g}%\n"
+                    f"Wind  {current.wind_speed_kmh:g} km/h\n"
+                    f"Feels like  {temperature(current.feels_like_c, unit)}"
+                )
+                basis = "Current estimate"
+            else:
+                detail = (
+                    (
+                        data.description
+                        + "\nLow  "
+                        + temperature(data.temperature_min_c, unit)
+                    )
                     if data
                     else "No daily data"
                 )
-            )
+                basis = "Forecast high"
             t.label(
-                self, detail, size=12, color=secondary, wraplength=width - 20, height=28
-            ).grid(row=5, column=0, padx=6, pady=(3, 0))
-        else:
-            ctk.CTkLabel(self, text="", image=icons.image(icon, 68)).grid(
-                row=2, column=0, pady=(5, 1)
+                self,
+                detail,
+                size=11,
+                color=ink,
+                justify="left",
+                anchor="w",
+                wraplength=width - 24,
+            ).pack(fill="x", padx=14)
+            t.label(self, basis, size=10, color=secondary, height=14).pack(
+                anchor="w", padx=14, pady=(1, 0)
             )
+        else:
+            ctk.CTkLabel(self, text="", image=icons.image(icon, 60)).pack(pady=(12, 10))
             t.label(
                 self,
                 temperature(data.temperature_max_c, unit) if data else "—",
-                size=23,
+                size=22,
                 color=ink,
                 bold=True,
-            ).grid(row=3, column=0)
+            ).pack()
             t.label(
-                self,
-                (
-                    "Low " + temperature(data.temperature_min_c, unit)
-                    if data
-                    else "Unavailable"
-                ),
-                size=12,
-                color=secondary,
-            ).grid(row=4, column=0, pady=(2, 0))
-        for child in self.winfo_children():
-            if child is not self.select:
-                child.bind("<Button-1>", lambda e: command())
+                self, "High · " + date.strftime("%d %b"), size=10, color=secondary
+            ).pack(pady=(2, 0))
         self.bind("<Button-1>", lambda e: command())
+
+        def clickable(widget):
+            for child in widget.winfo_children():
+                if child is not self.select:
+                    child.bind("<Button-1>", lambda e: command())
+                    if isinstance(child, ctk.CTkFrame):
+                        clickable(child)
+
+        clickable(self)
 
 
 class HourlyStrip(ctk.CTkFrame):
