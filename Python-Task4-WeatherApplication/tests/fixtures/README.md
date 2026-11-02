@@ -1,0 +1,1 @@
+These are synthetic, sanitized Open-Meteo-shaped fixtures, not recorded observations. Known city metadata and plausible model values exercise units, nullable probability, seven daily entries and 168 hourly instants. No personal data or API secrets.
