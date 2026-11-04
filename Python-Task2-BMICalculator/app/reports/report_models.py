@@ -22,7 +22,7 @@ class ReportOptions:
     def __post_init__(self) -> None:
         if not isinstance(self.title,str) or not self.title.strip() or len(self.title.strip())>100:
             raise ValidationError('Report title must contain 1 to 100 characters.')
-        if any(unicodedata.category(c).startswith('C') for c in self.title):
+        if any(unicodedata.category(c).startswith('C') or unicodedata.category(c) in {'Zl','Zp'} for c in self.title):
             raise ValidationError('Report title cannot contain control characters.')
         object.__setattr__(self,'title',self.title.strip())
         if type(self.include_history) is not bool or type(self.include_charts) is not bool:

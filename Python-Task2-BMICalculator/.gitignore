@@ -16,3 +16,18 @@ htmlcov/
 # Exported reports and interrupted report staging files are private
 *.pdf
 .bmi-report-*.tmp
+
+# Local environments, secrets, QA output and optional packaging
+venv/
+env/
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+*.bak
+.coverage.*
+coverage.xml
+build/
+dist/
+*.egg-info/

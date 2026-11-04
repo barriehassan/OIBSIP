@@ -14,7 +14,7 @@ from reportlab.pdfbase import pdfmetrics
 from app.visualization.bmi_chart import render_bmi_chart
 from app.visualization.weight_chart import render_weight_chart
 from .report_models import ReportData, ReportError
-from .report_styles import report_styles, NAVY, TEAL, PALE, MUTED, BORDER
+from .report_styles import report_styles, NAVY, PALE, MUTED, BORDER
 
 DISCLAIMER=("Body Mass Index (BMI) is a screening measure, not a medical diagnosis. "
     "BMI does not directly measure body fat or account for all factors affecting an individual's health. "

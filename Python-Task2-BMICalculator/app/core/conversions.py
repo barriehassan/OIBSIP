@@ -26,4 +26,8 @@ def feet_inches_to_metres(feet: int, inches: float = 0) -> float:
         raise ValidationError("Inches must be a valid number.")
     if not 0 <= inches < INCHES_PER_FOOT:
         raise ValidationError("Inches must be between zero and less than 12.")
-    return inches_to_metres(feet * INCHES_PER_FOOT + inches)
+    try:
+        total_inches = feet * INCHES_PER_FOOT + inches
+    except OverflowError as exc:
+        raise ValidationError("Feet and inches must produce a finite measurement.") from exc
+    return inches_to_metres(total_inches)

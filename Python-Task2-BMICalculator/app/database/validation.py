@@ -1,5 +1,6 @@
 """Shared persistence boundary validation and canonical UTC timestamps."""
 from datetime import datetime, timezone
+import unicodedata
 from app.core.validator import ValidationError
 
 def identifier(value: int) -> int:
@@ -11,7 +12,7 @@ def profile_name(value: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValidationError("Please enter a profile name.")
     value = value.strip()
-    if len(value) > 100 or any(ord(c) < 32 or ord(c) == 127 for c in value):
+    if len(value) > 100 or any(unicodedata.category(c) in {'Cc','Cf','Cs','Zl','Zp'} for c in value):
         raise ValidationError("Profile name must contain at most 100 characters and no control characters.")
     return value
 

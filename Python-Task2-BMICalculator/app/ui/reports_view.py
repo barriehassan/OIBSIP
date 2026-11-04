@@ -3,7 +3,6 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import get_context
 from datetime import date
 from pathlib import Path
-import tkinter as tk
 from tkinter import filedialog
 import customtkinter as ctk
 from app.core.validator import ValidationError
@@ -13,7 +12,7 @@ from app.reports.pdf_generator import generate_pdf
 from app.services.report_service import ReportService
 from app.services.analytics_service import PERIODS
 from .trends_view import TrendsView
-from .theme import CARD, INNER, MUTED, TEXT, TEAL, TEAL_DARK, CORAL, FONT, BORDER
+from .theme import INNER, MUTED, TEXT, TEAL, TEAL_DARK, CORAL, FONT, BORDER
 
 class ReportsView(ctk.CTkFrame):
     _card=staticmethod(TrendsView._card)

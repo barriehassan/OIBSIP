@@ -23,6 +23,10 @@ def icon(name: str, size: int = 22, colour: str = '#03d4ce') -> ctk.CTkImage:
     elif name=='dashboard':
         for x,y in ((3,3),(14,3),(3,14),(14,14)):box((x,y,x+7,y+7))
     elif name=='reports':box((5,2,19,22));line([(9,8),(15,8)]);line([(9,12),(15,12)]);line([(9,16),(15,16)])
+    elif name=='calendar':
+        box((3,5,21,21));line([(3,10),(21,10)]);line([(8,2),(8,7)]);line([(16,2),(16,7)])
+    elif name=='ruler':
+        line([(2,16),(16,2),(22,8),(8,22),(2,16)]);line([(8,11),(11,14)]);line([(12,7),(15,10)])
     elif name=='weight':box((4,8,20,22));ellipse((9,2,15,8))
     elif name=='trophy':
         line([(6,3),(18,3),(17,12),(12,16),(7,12),(6,3)]);line([(12,16),(12,21)]);line([(7,22),(17,22)])

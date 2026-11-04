@@ -1,12 +1,13 @@
 """Approved Vitality Analytics desktop layout and service-backed interactions."""
 from datetime import datetime
+from math import isfinite
 from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
 import customtkinter as ctk
 from PIL import Image, ImageTk, ImageDraw
 from app.core.classification import CATEGORY_METADATA
-from app.core.validator import ValidationError
+from app.core.validator import HEIGHT_LIMITS, WEIGHT_LIMITS, ValidationError
 from app.database.errors import DatabaseError
 from .controller import UIController
 from .gauge import BMIGauge
@@ -62,6 +63,8 @@ class BMIWindow(ctk.CTk):
         self.profile_map: dict[str,int] = {}
         self.weight = tk.StringVar()
         self.height = tk.StringVar()
+        self.age = tk.StringVar()
+        self.gender = tk.StringVar()
         self.status = tk.StringVar(value='Enter your height and weight to begin.')
         self._building = True
         self._hero_job = None
@@ -85,12 +88,13 @@ class BMIWindow(ctk.CTk):
         self._measurements()
         self._results()
         self.other_page = ctk.CTkFrame(self.body,fg_color='transparent')
-        for var in (self.weight,self.height): var.trace_add('write', self._input_changed)
+        for var in (self.weight,self.height,self.age): var.trace_add('write', self._input_changed)
         self._building = False
         self.reload_profiles()
         self._render_result()
         self.refresh_summary()
-        self.bind('<Return>',lambda event:self.calculate() if self.active_page=='Calculator' and self.focus_get() in (self.weight_entry,self.height_entry) else None)
+        for entry in (self.age_entry, self.height_entry, self.weight_entry):
+            entry.bind('<Return>', lambda event: self.calculate())
         self.bind('<Escape>',lambda event:self.focus_set())
 
     def _nav(self) -> None:
@@ -113,7 +117,7 @@ class BMIWindow(ctk.CTk):
         self.nav_lines = {}
         for i,(name,icon_name) in enumerate([('Calculator','calculator'),('Profiles','profile'),('History','history'),('Trends','trends'),('Dashboard','dashboard'),('Reports','reports')]):
             links.grid_columnconfigure(i,weight=1)
-            b = ctk.CTkButton(links,text=name,image=icon(icon_name,17,MUTED),compound='left',font=(FONT,13),height=45,
+            b = ctk.CTkButton(links,text=name,image=icon(icon_name,17,MUTED),compound='left',font=(FONT,13),height=45,width=90,
                 fg_color='transparent',hover_color='#12323d',text_color=MUTED,corner_radius=4,
                 command=lambda n=name:self.navigate(n))
             b.grid(row=0,column=i,sticky='ew',padx=2);self.nav_buttons[name]=b
@@ -127,7 +131,14 @@ class BMIWindow(ctk.CTk):
 
     def _resize_content(self,event) -> None:
         if event.widget is self and hasattr(self,'body'):
-            self.body.configure(height=max(1050 if self.active_page=='Dashboard' else 748,event.height-262))
+            self._fit_content(event.height)
+
+    def _fit_content(self, height):
+        compact = self.active_page == 'Calculator' and height < 960
+        hero_height = 112 if compact else 155
+        self.hero.configure(height=hero_height)
+        minimum = 1050 if self.active_page == 'Dashboard' else (642 if compact else 748)
+        self.body.configure(height=max(minimum, height - hero_height - 107))
 
     def toggle_maximize(self) -> None:
         try:
@@ -147,7 +158,7 @@ class BMIWindow(ctk.CTk):
 
     def _draw_hero(self) -> None:
         self._hero_job = None
-        w=max(1,self.hero.winfo_width());h=155
+        w=max(1,self.hero.winfo_width());h=self.hero.winfo_height()
         self.hero.delete('all')
         if self._hero_source:
             art = self._hero_source.resize((w,h),Image.Resampling.LANCZOS).convert('RGBA')
@@ -160,9 +171,9 @@ class BMIWindow(ctk.CTk):
             art = Image.alpha_composite(art,overlay)
             self._hero_photo=ImageTk.PhotoImage(art)
             self.hero.create_image(0,0,image=self._hero_photo,anchor='nw')
-        self.hero.create_text(12,30,text='A  H E A L T H I E R  T O M O R R O W',anchor='w',fill=TEAL,font=(FONT,10,'bold'))
-        self.hero.create_text(12,65,text='Small Inputs.',anchor='w',fill=TEXT,font=(FONT,32,'bold'))
-        self.hero.create_text(12,106,text='Bigger Insights.',anchor='w',fill=TEAL,font=(FONT,34,'bold'))
+        self.hero.create_text(12,h*.17,text='A  H E A L T H I E R  T O M O R R O W',anchor='w',fill=TEAL,font=(FONT,10,'bold'))
+        self.hero.create_text(12,h*.42,text='Small Inputs.',anchor='w',fill=TEXT,font=(FONT,32,'bold'))
+        self.hero.create_text(12,h*.73,text='Bigger Insights.',anchor='w',fill=TEAL,font=(FONT,34,'bold'))
         self.hero.create_text(w-28,58,text='“  More than a number —\na clearer view of your health.  ”',anchor='e',justify='left',fill=TEXT,font=(FONT,16,'italic'))
         self.hero.create_line(w-70,108,w-28,108,fill=TEAL,width=2)
         if not self._hero_source:
@@ -173,36 +184,88 @@ class BMIWindow(ctk.CTk):
         left.grid_columnconfigure(0,weight=1)
         ctk.CTkLabel(left,text='',image=icon('profile',34)).grid(row=0,column=0,sticky='w',padx=22,pady=(18,0))
         label(left,'Profile & Measurements',20,bold=True).grid(row=0,column=0,sticky='w',padx=(70,10),pady=(18,0))
-        label(left,'Enter your details to calculate your Body Mass Index (BMI).',12,MUTED,wraplength=350,justify='left').grid(row=1,column=0,sticky='w',padx=(25,18),pady=(4,26))
+        label(left,'Enter your details to calculate your BMI.',12,MUTED,wraplength=360,justify='left').grid(row=1,column=0,sticky='w',padx=(25,18),pady=(2,12))
         ctk.CTkLabel(left,text='  Select Profile',image=icon('profile',20,MUTED),compound='left',text_color=TEXT,font=(FONT,14)).grid(row=2,column=0,sticky='w',padx=24)
         choices = ctk.CTkFrame(left,fg_color='transparent');choices.grid(row=3,column=0,sticky='ew',padx=24,pady=(8,10));choices.grid_columnconfigure(0,weight=1)
-        self.profile_menu = ctk.CTkOptionMenu(choices,values=['No profiles yet'],command=self.choose_profile,
+        selector = ctk.CTkFrame(choices, fg_color=INNER, border_width=1, border_color=BORDER)
+        selector.grid(row=0,column=0,sticky='ew',padx=(0,10))
+        selector.grid_columnconfigure(1,weight=1)
+        self.avatar = label(selector, '–', 12, BG, bold=True, width=32, height=32,
+                            fg_color=TEAL, corner_radius=16)
+        self.avatar.grid(row=0,column=0,padx=(10,2))
+        self.profile_menu = ctk.CTkOptionMenu(selector,values=['No profiles yet'],command=self.choose_profile,
             fg_color=INNER,button_color=INNER,button_hover_color='#183340',dropdown_fg_color=INNER,
             dropdown_hover_color='#183340',text_color=TEXT,font=(FONT,14),height=48,dynamic_resizing=False)
-        self.profile_menu.grid(row=0,column=0,sticky='ew',padx=(0,10))
+        self.profile_menu.grid(row=0,column=1,sticky='ew',padx=(0,4),pady=3)
         button(choices,'+  New Profile',self.new_profile,width=124).grid(row=0,column=1)
-        ctk.CTkFrame(left,height=1,fg_color=BORDER).grid(row=4,column=0,sticky='ew',padx=24,pady=(14,20))
-        note=ctk.CTkFrame(left,fg_color=INNER,corner_radius=10)
-        note.grid(row=5,column=0,sticky='ew',padx=24,pady=(0,20))
-        label(note,'ADULT BMI REFERENCE',11,TEAL,bold=True).pack(anchor='w',padx=15,pady=(12,2))
-        label(note,'Age and gender are not collected.\nBMI is a reference, not a diagnosis.',13,MUTED,justify='left').pack(anchor='w',padx=15,pady=(0,12))
-        self.height_entry=self._input_row(left,6,'Height',self.height,'cm')
-        self.weight_entry=self._input_row(left,7,'Weight',self.weight,'kg')
-        left.grid_rowconfigure(8,weight=1)
+        ctk.CTkFrame(left,height=1,fg_color=BORDER).grid(row=4,column=0,sticky='ew',padx=24,pady=(9,12))
+        gender_row = self._field_row(left, 5, 'Gender', 'profile')
+        self.gender_control = ctk.CTkSegmentedButton(
+            gender_row, values=['Male', 'Female', 'Other'], variable=self.gender,
+            fg_color=BORDER, unselected_color=INNER, unselected_hover_color='#17333e',
+            selected_color='#07525b', selected_hover_color='#09626b',
+            text_color=TEXT, height=42, corner_radius=8, border_width=2)
+        self.gender_control.grid(row=0, column=1, sticky='ew')
+        self.age_entry = self._input_row(left, 6, 'Age', self.age, 'years', 'calendar', 1, 20)
+        self.height_entry = self._input_row(left, 7, 'Height', self.height, 'cm', 'ruler', 1,
+                                            HEIGHT_LIMITS[0] * 100, HEIGHT_LIMITS[1] * 100)
+        self.weight_entry = self._input_row(left, 8, 'Weight', self.weight, 'kg', 'weight', 0.1,
+                                            *WEIGHT_LIMITS)
+        label(left, 'Age and gender are optional · session only · ages 20+', 12, MUTED,
+              anchor='w').grid(row=9, column=0, sticky='ew', padx=24)
+        for row in (5, 6, 7, 8, 10):
+            left.grid_rowconfigure(row, weight=1)
         self.feedback=label(left,'',13,MUTED,wraplength=370,justify='left',textvariable=self.status)
-        self.feedback.grid(row=8,column=0,sticky='sw',padx=25,pady=(8,12))
+        self.feedback.grid(row=10,column=0,sticky='sw',padx=25,pady=(3,4))
         self.calculate_button=button(left,'Calculate BMI                     →',self.calculate,True,image=icon('calculator',22,'#ffffff'),compound='left')
         self.calculate_button.configure(height=55,font=(FONT,17,'bold'))
-        self.calculate_button.grid(row=9,column=0,sticky='ew',padx=24,pady=(5,10))
+        self.calculate_button.grid(row=11,column=0,sticky='ew',padx=24,pady=(5,10))
         ctk.CTkButton(left,text='Reset',image=icon('reset',21,MUTED),compound='left',command=self.reset,fg_color='transparent',hover_color=INNER,
-            text_color=MUTED,font=(FONT,14),height=36).grid(row=10,column=0,pady=(0,22))
+            text_color=MUTED,font=(FONT,14),height=36).grid(row=12,column=0,pady=(0,12))
 
-    def _input_row(self,parent: ctk.CTkFrame,row: int,title: str,variable: tk.StringVar,unit: str) -> ctk.CTkEntry:
-        line=ctk.CTkFrame(parent,fg_color='transparent');line.grid(row=row,column=0,sticky='ew',padx=24,pady=(0,20))
-        line.grid_columnconfigure(1,weight=1)
-        label(line,title,15).grid(row=0,column=0,sticky='w',padx=(0,25))
-        entry=ctk.CTkEntry(line,textvariable=variable,height=54,font=(FONT,20,'bold'),fg_color=INNER,border_color=BORDER,corner_radius=9)
-        entry.grid(row=0,column=1,sticky='ew');label(line,unit,13,MUTED).grid(row=0,column=2,padx=(10,0))
+    def _field_row(self, parent, row: int, title: str, symbol: str):
+        line = ctk.CTkFrame(parent, fg_color='transparent')
+        line.grid(row=row, column=0, sticky='ew', padx=24, pady=(4, 9))
+        line.grid_columnconfigure(0, minsize=103)
+        line.grid_columnconfigure(1, weight=1)
+        label(line, '   ' + title, 15, image=icon(symbol, 20, TEXT),
+              compound='left').grid(row=0, column=0, sticky='w')
+        return line
+
+    def _input_row(self, parent, row, title, variable, unit, symbol, step,
+                   minimum, maximum=None) -> ctk.CTkEntry:
+        line = self._field_row(parent, row, title, symbol)
+        field = ctk.CTkFrame(line, fg_color=INNER, border_width=1,
+                             border_color=BORDER, corner_radius=9)
+        field.grid(row=0, column=1, sticky='ew')
+        field.grid_columnconfigure(0, weight=1)
+        entry = ctk.CTkEntry(field, textvariable=variable, height=48, width=42,
+                             fg_color=INNER, text_color=TEXT, border_width=0,
+                             font=(FONT, 18, 'bold'))
+        entry.grid(row=0, column=0, rowspan=2, sticky='ew', padx=(10, 2), pady=3)
+        label(field, unit, 13, TEXT).grid(row=0, column=1, rowspan=2, padx=4)
+
+        def adjust(direction):
+            try:
+                raw = variable.get().strip()
+                value = float(raw) + direction * step if raw else minimum
+                if not isfinite(value) or (title == 'Age' and raw and not value.is_integer()):
+                    raise ValueError
+                value = max(minimum, value)
+                if maximum is not None:
+                    value = min(maximum, value)
+                variable.set(format(value, '.12g'))
+            except (ValueError, OverflowError):
+                self.status.set(f'Enter a valid {title.lower()} before adjusting it.')
+                self.feedback.configure(text_color=CORAL)
+            return 'break'
+
+        for index, (glyph, direction, key) in enumerate([('⌃', 1, '<Up>'), ('⌄', -1, '<Down>')]):
+            control = ctk.CTkButton(field, text=glyph, width=24, height=22,
+                                    fg_color=INNER, hover_color=BORDER, text_color=TEXT,
+                                    command=lambda d=direction: adjust(d))
+            control.grid(row=index, column=2, padx=(0, 5), pady=1)
+            entry.bind(key, lambda event, d=direction: adjust(d))
         return entry
 
     def _results(self) -> None:
@@ -213,6 +276,8 @@ class BMIWindow(ctk.CTk):
         result.grid_columnconfigure(0,weight=50,uniform='result');result.grid_columnconfigure(1,weight=50,uniform='result')
         result.grid_rowconfigure(1,weight=1)
         ctk.CTkLabel(result,text='  Your BMI Result',image=icon('bars',23),compound='left',font=(FONT,21,'bold'),text_color=TEXT).grid(row=0,column=0,sticky='nw',padx=20,pady=(14,0))
+        label(result, 'Adult BMI reference · ages 20+', 12, MUTED, anchor='w').grid(
+            row=0, column=0, sticky='sw', padx=(49, 6), pady=(41, 0))
         self.calculated_label=label(result,'Not calculated yet',11,MUTED)
         self.calculated_label.grid(row=0,column=1,sticky='e',padx=20,pady=(18,0))
         self.gauge=BMIGauge(result);self.gauge.grid(row=1,column=0,sticky='nsew',padx=15,pady=(6,0))
@@ -222,11 +287,12 @@ class BMIWindow(ctk.CTk):
         self.interpretation=label(meaning,'',14,MUTED,wraplength=305,justify='left',anchor='nw')
         self.interpretation.grid(row=1,column=0,sticky='nsew',padx=18,pady=(0,15))
         meaning.bind('<Configure>',lambda event:self.interpretation.configure(wraplength=max(150,event.width-36)))
-        scale=ctk.CTkFrame(result,fg_color='transparent');scale.grid(row=2,column=0,sticky='ew',padx=(20,6),pady=(6,15))
+        scale=ctk.CTkFrame(result,fg_color=CARD);scale.grid(row=2,column=0,sticky='ew',padx=(20,6),pady=(6,15))
         for i,(name,rng,colour) in enumerate([('Underweight','< 18.5','#369ee5'),('Normal','18.5 – <25','#02c6aa'),('Overweight','25 – <30','#ffbc4b'),('Obese','≥ 30','#fb637b')]):
             scale.grid_columnconfigure(i,weight=1,uniform='scale')
             ctk.CTkFrame(scale,height=8,corner_radius=2,fg_color=colour).grid(row=0,column=i,sticky='ew',padx=2)
-            label(scale,name,10).grid(row=1,column=i,pady=(3,0));label(scale,rng,10,MUTED).grid(row=2,column=i)
+            label(scale, name, 13, TEXT, fg_color=CARD, height=20).grid(row=1, column=i, pady=(4, 0))
+            label(scale, rng, 12, '#c0d1dd', fg_color=CARD, height=19).grid(row=2, column=i)
         self.save_button=button(result,'Save Result to Profile',self.save_result,True,image=icon('reports',20,'#ffffff'),compound='left')
         self.save_button.grid(row=2,column=1,sticky='ew',padx=(25,20),pady=(8,17))
         summaries=ctk.CTkFrame(right,fg_color='transparent');summaries.grid(row=1,column=0,sticky='nsew',pady=(0,12))
@@ -273,16 +339,19 @@ class BMIWindow(ctk.CTk):
         self.gauge.set_result(result)
         if result:
             metadata=CATEGORY_METADATA[result.category]
-            self.interpretation.configure(text=f'Your BMI is {result.formatted_bmi}, in the {result.category.value} adult reference category.\n\n{metadata.explanation}\n\nBMI does not measure body fat directly and is not a diagnosis.',text_color=MUTED)
+            self.interpretation.configure(text=f'Your BMI is {result.formatted_bmi} ({result.category.value}). {metadata.explanation}\n\nBMI is a screening measure, not a diagnosis.',text_color=MUTED)
             self.calculated_label.configure(text='Calculated '+display_time(self.controller.calculated_at.isoformat()))
         else:
-            self.interpretation.configure(text='Enter your height and weight, then calculate your BMI.\n\nYour result will use the four adult BMI reference categories.\n\nNo measurement is saved until you choose Save Result to Profile.')
+            self.interpretation.configure(text='Enter your height and weight to see your adult BMI category.\n\nChoose Save Result to Profile to keep the measurement.')
             self.calculated_label.configure(text='Not calculated yet')
         self.save_button.configure(state='normal' if result and self.controller.profile_id is not None and self.controller.saved is None else 'disabled',
             text='✓   Result Saved' if self.controller.saved else 'Save Result to Profile')
 
     def calculate(self) -> None:
         try:
+            age = self.age.get().strip()
+            if age and (not age.isascii() or not age.isdigit() or len(age) > 3 or int(age) < 20):
+                raise ValidationError('Enter an adult age in whole years (20+) or leave age blank.')
             self.controller.calculate(self.weight.get(),self.height.get())
             self.status.set('BMI calculated. Save it to your selected profile.' if self.controller.profile_id else 'BMI calculated. Create or select a profile to save measurements.')
             self.feedback.configure(text_color=TEAL)
@@ -299,7 +368,7 @@ class BMIWindow(ctk.CTk):
         self._render_result()
 
     def reset(self) -> None:
-        self.weight.set('');self.height.set('');self.controller.invalidate()
+        self.age.set('');self.gender.set('');self.weight.set('');self.height.set('');self.controller.invalidate()
         self._render_result();self.status.set('Enter your height and weight to begin.');self.feedback.configure(text_color=MUTED)
         self.height_entry.focus_set()
 
@@ -312,11 +381,18 @@ class BMIWindow(ctk.CTk):
             self.profile_menu.configure(values=list(self.profile_map) or ['No profiles yet'])
             selected=next((name for name,pid in self.profile_map.items() if pid==self.controller.profile_id),'No profiles yet')
             self.profile_menu.set(selected)
+            self._update_avatar(profiles)
         except (ValidationError,DatabaseError) as error:self.show_error(error)
+
+    def _update_avatar(self, profiles) -> None:
+        current = next((p for p in profiles if p.id == self.controller.profile_id), None)
+        initials = ''.join(word[0] for word in current.name.split()[:2]) if current else '–'
+        self.avatar.configure(text=initials.upper())
 
     def choose_profile(self,name: str) -> None:
         try:
             self.controller.select(self.profile_map.get(name))
+            self.reload_profiles()
             self.reset();self.refresh_summary()
         except (ValidationError,DatabaseError) as error:self.show_error(error)
 
@@ -382,8 +458,10 @@ class BMIWindow(ctk.CTk):
             self.nav_lines[name].configure(fg_color=TEAL if name==self.active_page else BG)
 
     def navigate(self,page: str) -> None:
+        if page not in self.nav_buttons:
+            raise ValidationError('Choose a supported navigation page.')
         self.active_page=page;self._highlight_nav()
-        self.body.configure(height=max(1050 if page=='Dashboard' else 748,self.winfo_height()-262))
+        self._fit_content(self.winfo_height())
         for view in (self.dashboard_page,self.reports_page):
             if view is not None:view.grid_remove()
         if page in ('Dashboard','Reports'):
@@ -425,10 +503,6 @@ class BMIWindow(ctk.CTk):
         try:
             if page=='Profiles':self._profiles_page(area)
             elif page=='History':self._history_page(area)
-            else:
-                label(area,f'{page} is planned for a later task.',24,bold=True).pack(pady=(65,15))
-                label(area,'Your profiles and measurements are available in Calculator and History.\nDashboard and reporting remain planned features.',16,MUTED,justify='center').pack(pady=10)
-                button(area,'Back to Calculator',lambda:self.navigate('Calculator')).pack(pady=25)
         except (ValidationError,DatabaseError) as error:self.show_error(error)
 
     def _profiles_page(self,area) -> None:

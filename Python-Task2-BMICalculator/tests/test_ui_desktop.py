@@ -111,3 +111,31 @@ def test_extreme_supported_bmi_fits_gauge(window):
     assert window.controller.result.formatted_bmi=='5555.56'
     box=window.gauge.bbox('bmi_value')
     assert box[0]>=0 and box[2]<=window.gauge.winfo_width()
+
+
+def test_optional_fields_reset_and_adult_scope(window):
+    window.height.set('175')
+    window.weight.set('95')
+    window.age.set('16')
+    window.calculate()
+    assert window.gauge.result is None
+    assert '20+' in window.status.get()
+    window.age.set('32')
+    window.gender.set('Other')
+    window.calculate()
+    assert window.gauge.result.formatted_bmi == '31.02'
+    window.reset()
+    assert window.age.get() == window.gender.get() == ''
+
+
+def test_category_text_fits_badge_at_minimum_size(window):
+    window.geometry('1240x860')
+    window.update()
+    for kg in ('50', '70', '80', '95'):
+        window.height.set('175')
+        window.weight.set(kg)
+        window.calculate()
+        badge = window.gauge.bbox('badge')
+        text = window.gauge.bbox('category')
+        assert badge[0] < text[0] < text[2] < badge[2]
+        assert badge[1] < text[1] < text[3] < badge[3]

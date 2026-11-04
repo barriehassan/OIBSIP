@@ -31,6 +31,14 @@ class Database:
             raise InitializationError("Use a temporary file database with short-lived connections.")
         self.initialize()
 
+    @staticmethod
+    def _rollback(connection: sqlite3.Connection) -> None:
+        """Keep recovery errors within the same controlled storage boundary."""
+        try:
+            connection.rollback()
+        except (sqlite3.Error, OSError) as exc:
+            raise DatabaseError("Database recovery failed. Close the app and check storage before retrying.") from exc
+
     @contextmanager
     def connection(self, *, write: bool = False) -> Iterator[sqlite3.Connection]:
         connection = None
@@ -47,19 +55,22 @@ class Database:
                 connection.commit()
         except sqlite3.IntegrityError as exc:
             if connection is not None:
-                connection.rollback()
+                self._rollback(connection)
             raise IntegrityError("The operation violates a database constraint.") from exc
         except (sqlite3.Error, OSError) as exc:
             if connection is not None:
-                connection.rollback()
+                self._rollback(connection)
             raise DatabaseError("Database operation failed. Check storage access and try again.") from exc
         except BaseException:
             if connection is not None and write:
-                connection.rollback()
+                self._rollback(connection)
             raise
         finally:
             if connection is not None:
-                connection.close()
+                try:
+                    connection.close()
+                except (sqlite3.Error, OSError) as exc:
+                    raise DatabaseError("The database connection could not be closed. Check history before retrying the operation.") from exc
 
     def initialize(self) -> None:
         """Create missing parent directories and initialize schema atomically."""

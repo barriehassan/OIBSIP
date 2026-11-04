@@ -46,10 +46,19 @@ class BMIGauge(tk.Canvas):
         self.create_text(cx,cy+size*.02,text=value,fill=TEXT,font=value_font,tags='bmi_value')
         category = self.result.category.value.upper() if self.result else 'AWAITING INPUT'
         colour = CATEGORY_METADATA[self.result.category].colour if self.result else TEAL
+        self._badge_font = tkfont.Font(family=FONT, size=-max(13, int(size*.057)), weight='bold')
+        badge_y = cy + size*.24
         if self.result:
-            self.create_line(cx-48,cy+size*.23,cx+48,cy+size*.23,fill=colour,width=32,capstyle='round')
-        self.create_text(cx,cy+size*.23,text=category,fill='#05131b' if self.result else colour,
-                         font=(FONT,-max(12,int(size*.05)),'bold'))
+            height = self._badge_font.metrics('linespace') + 12
+            width = max(size*.45, self._badge_font.measure(category) + 28)
+            left, right = cx - width/2, cx + width/2
+            top, bottom = badge_y - height/2, badge_y + height/2
+            style = dict(fill=colour, outline='', tags='badge')
+            self.create_oval(left, top, left + height, bottom, **style)
+            self.create_oval(right - height, top, right, bottom, **style)
+            self.create_rectangle(left + height/2, top, right - height/2, bottom, **style)
+        self.create_text(cx, badge_y, text=category, fill='#071820' if self.result else colour,
+                         font=self._badge_font, tags='category')
         if self.result:
             angle = math.radians(225-gauge_fraction(self.result.bmi_value)*270)
             x,y = cx+radius*math.cos(angle),cy-radius*math.sin(angle)

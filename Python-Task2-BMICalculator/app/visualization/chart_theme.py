@@ -40,6 +40,8 @@ def render_series(ax: Axes, data: AnalyticsData, values: tuple[float, ...],
                 color=MUTED,fontsize=8 if compact else 10,transform=ax.transAxes)
         return
     date_format='%d %b\n%H:%M' if data.dates[-1]-data.dates[0] < timedelta(days=2) else '%d %b\n%Y'
+    if compact:
+        date_format = '%H:%M' if data.dates[-1]-data.dates[0] < timedelta(days=2) else '%d %b'
     ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format,tz=timezone.utc))
     line,=ax.plot(data.dates,values,color=colour,linewidth=1.6,
         linestyle='-' if len(values)>1 else 'None',marker='o',
@@ -54,7 +56,7 @@ def render_series(ax: Axes, data: AnalyticsData, values: tuple[float, ...],
         ax.set_xlim(data.dates[0]-timedelta(hours=12),data.dates[-1]+timedelta(hours=12))
     if len(values)==1 or compact:
         ax.annotate(f'{values[-1]:.2f}' if ylabel=='BMI' else f'{values[-1]:g} kg',
-                    xy=(data.dates[-1],values[-1]),xytext=(-7,10),textcoords='offset points',
+                    xy=(data.dates[-1],values[-1]),xytext=(-7,-12 if compact and values[-1] >= (max(values)+min(values))/2 else 10),textcoords='offset points',
                     ha='right',color=TEXT,fontsize=8 if compact else 10)
     if len(data.dates)!=len(set(data.dates)):
         ax.text(.01,.98,'Equal-time markers may overlap; all records retained.',
