@@ -17,13 +17,14 @@ class ForecastCard(ctk.CTkFrame):
         unit,
         command,
         width,
+        height=198,
         observed_time=None,
         cached=False,
     ):
         super().__init__(
             parent,
             width=width,
-            height=198,
+            height=height,
             corner_radius=25,
             fg_color=t.SELECTED if selected else t.PANEL,
         )
@@ -72,7 +73,7 @@ class ForecastCard(ctk.CTkFrame):
                 else data.temperature_max_c if data else None
             )
             self.temperature_label = t.label(
-                middle, temperature(value, unit), size=30, bold=True, color=ink
+                middle, temperature(value, unit), size=34, bold=True, color=ink
             )
             self.temperature_label.pack(side="left")
             ctk.CTkLabel(middle, text="", image=icons.image(icon, 62)).pack(
@@ -109,17 +110,19 @@ class ForecastCard(ctk.CTkFrame):
                 anchor="w", padx=14, pady=(1, 0)
             )
         else:
-            ctk.CTkLabel(self, text="", image=icons.image(icon, 60)).pack(pady=(12, 10))
+            ctk.CTkLabel(
+                self, text="", image=icons.image(icon, min(76, width - 12))
+            ).pack(expand=True)
             t.label(
                 self,
                 temperature(data.temperature_max_c, unit) if data else "—",
-                size=22,
+                size=25,
                 color=ink,
                 bold=True,
             ).pack()
             t.label(
                 self, "High · " + date.strftime("%d %b"), size=10, color=secondary
-            ).pack(pady=(2, 0))
+            ).pack(pady=(2, 10))
         self.bind("<Button-1>", lambda e: command())
 
         def clickable(widget):

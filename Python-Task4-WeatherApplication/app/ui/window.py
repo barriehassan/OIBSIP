@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 import webbrowser
 import customtkinter as ctk
 from app.ui import theme as t
+from app.core.models import Location
+from app.services.weather_service import LocationWeatherResult
 from .controller import Controller
 from .presentation import (
     temperature,
@@ -22,6 +24,39 @@ from .components.weather_icon import IconImages, VALID_IDS
 from .components.chrome import symbol
 from .enhancements import Enhancements
 from app.storage.local import LocalStore, StorageError
+
+SUGGESTED_CITIES = (
+    Location(
+        2643743,
+        "London",
+        "England",
+        "United Kingdom",
+        "GB",
+        51.50853,
+        -0.12574,
+        "Europe/London",
+    ),
+    Location(
+        1816670,
+        "Beijing",
+        "Beijing Municipality",
+        "China",
+        "CN",
+        39.9075,
+        116.39723,
+        "Asia/Shanghai",
+    ),
+    Location(
+        2409306,
+        "Freetown",
+        "Western Area",
+        "Sierra Leone",
+        "SL",
+        8.48714,
+        -13.2356,
+        "Africa/Freetown",
+    ),
+)
 
 
 class SkyCastWindow(ctk.CTk):
@@ -53,7 +88,8 @@ class SkyCastWindow(ctk.CTk):
         self.poll_id = None
         self.minute_id = None
         self.resize_id = None
-        self.last_width = 0
+        self.last_size = (0, 0)
+        self.card_height = 198
         self.closed = False
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.details_visible = False
@@ -84,7 +120,7 @@ class SkyCastWindow(ctk.CTk):
         self.search_group = ctk.CTkFrame(
             self.header, fg_color=t.PANEL, corner_radius=24, width=480, height=40
         )
-        self.search_group.grid(row=0, column=1, sticky="w")
+        self.search_group.place(relx=0.52, y=1, anchor="n")
         self.search_group.pack_propagate(False)
         self.search_button = t.button(
             self.search_group,
@@ -296,7 +332,11 @@ class SkyCastWindow(ctk.CTk):
         self.details_visible = not self.details_visible
         if self.details_visible:
             self.detail_panel.grid()
-            self.after_idle(lambda: self.page._parent_canvas.yview_moveto(1))
+            self.after_idle(
+                lambda: self.page._parent_canvas.yview_moveto(
+                    self.detail_panel.winfo_y() / max(1, self.page.winfo_height())
+                )
+            )
         else:
             self.detail_panel.grid_remove()
             self.page._parent_canvas.yview_moveto(0)
@@ -505,40 +545,59 @@ class SkyCastWindow(ctk.CTk):
     def resized(self, event):
         if event.widget is not self:
             return
-        width = self.winfo_width()
-        if abs(width - self.last_width) < 10:
+        size = (self.winfo_width(), self.winfo_height())
+        if size == self.last_size:
             return
-        self.last_width = width
+        self.last_size = size
         if self.resize_id:
             self.after_cancel(self.resize_id)
         self.resize_id = self.after(140, self.reflow)
 
     def reflow(self):
         self.resize_id = None
-        compact = self.winfo_width() < 1150
-        self.shell.pack_configure(
-            padx=24 if compact else 60, pady=20 if self.winfo_height() < 820 else 60
-        )
-        self.header.pack_configure(
-            padx=24 if compact else 32,
-            pady=(16, 8) if self.winfo_height() < 820 else (20, 20),
-        )
-        self.identity.grid_configure(padx=(0, 12 if compact else 24))
+        scale = self.shell._get_widget_scaling()
+        width, height = self.winfo_width() / scale, self.winfo_height() / scale
+        compact = width < 1150
+        margin_x = round(width * (0.022 if compact else 0.05))
+        margin_y = round(height * (0.025 if height < 820 else 0.075))
+        self.shell.pack_configure(padx=margin_x, pady=margin_y)
+        self.header.pack_configure(padx=24 if compact else 32, pady=(18, 16))
         self.location.configure(
-            width=126 if compact else 174, wraplength=126 if compact else 174
+            width=120 if compact else 174, wraplength=120 if compact else 174
         )
-        self.utilities.grid_configure(padx=(12 if compact else 28, 0))
-        self.header.columnconfigure(0, minsize=300 if compact else 380)
-        self.header.columnconfigure(2, minsize=170 if compact else 240)
-        self.search_group.configure(
-            width=310 if compact else min(480, self.winfo_width() - 880)
+        self.identity.grid_configure(padx=0)
+        self.utilities.grid_configure(padx=0)
+        self.header.columnconfigure(0, minsize=0)
+        self.header.columnconfigure(2, minsize=0)
+        self.update_idletasks()
+        header = self.header.winfo_width() / scale
+        center = max(header * 0.52, self.identity.winfo_width() / scale + 164)
+        space = min(
+            center - self.identity.winfo_width() / scale - 8,
+            header - center - self.utilities.winfo_width() / scale - 8,
         )
-        self.page.columnconfigure(1, minsize=250 if compact else 280)
+        self.search_group.configure(width=max(140, min(header * 0.405, 2 * space)))
+        self.search_group.place_configure(relx=center / max(1, header))
+        page_width = self.page.winfo_width()
+        self.page.columnconfigure(
+            1, minsize=round(max(222 * scale, page_width * 0.255))
+        )
         self.forecast_mode.pack_forget()
         if not compact:
             self.forecast_mode.pack(side="right")
-        self.map.configure(height=272 if self.winfo_height() < 820 else 306)
-        self.status.configure(wraplength=max(500, self.winfo_width() - 350))
+        self.card_height = max(184, round(page_width / scale * 0.164))
+        self.card_strip.configure(height=self.card_height + 3)
+        self.rain.configure(height=round(self.card_height * scale))
+        self.update_idletasks()
+        visible_bottom = (
+            self.page._parent_canvas.winfo_rooty()
+            + self.page._parent_canvas.winfo_height()
+        )
+        map_top = self.page._parent_canvas.winfo_rooty() + self.map_frame.winfo_y()
+        self.map.configure(
+            height=max(round(235 * scale), visible_bottom - map_top - round(18 * scale))
+        )
+        self.status.configure(wraplength=max(420, width - 350))
         self.update_idletasks()
         self.render()
 
@@ -608,8 +667,15 @@ class SkyCastWindow(ctk.CTk):
             today = local_today(b, now)
             if s.selected_date not in [d for d, _ in slots]:
                 s.selected_date = today
-            available = max(600, self.card_strip._parent_canvas.winfo_width() - 8)
-            selected_width = 208
+            available = max(
+                1,
+                int(
+                    self.card_strip._parent_canvas.winfo_width()
+                    / self.shell._get_widget_scaling()
+                )
+                - 4,
+            )
+            selected_width = max(200, round(available * 0.24))
             small_width = max(78, int((available - selected_width - 60) / 6))
             if selected_width + 6 * small_width + 60 <= available:
                 self.card_strip._scrollbar.grid_remove()
@@ -627,6 +693,7 @@ class SkyCastWindow(ctk.CTk):
                     unit=s.unit,
                     command=lambda d=date: self.select_day(d),
                     width=selected_width if selected else small_width,
+                    height=self.card_height,
                     cached=s.cache_source != "network",
                     observed_time=(
                         b.current.observed_at.astimezone(tz)
@@ -636,7 +703,7 @@ class SkyCastWindow(ctk.CTk):
                         else None
                     ),
                 )
-                card.grid(row=0, column=i, padx=(0, 10))
+                card.grid(row=0, column=i, padx=(0, 10 if i < 6 else 0))
                 card.select.bind(
                     "<Left>",
                     lambda e, d=date: self.select_day(
@@ -713,41 +780,51 @@ class SkyCastWindow(ctk.CTk):
         for child in self.cities.winfo_children():
             child.destroy()
         s = self.controller.state
-        if not s.cities:
-            for title, detail in [
-                (
-                    "Build your city list",
-                    "Search a place, then use\n“Add current city” below.",
-                ),
-                ("Real weather, chosen by you", "Up to three cities this session."),
-                ("Select a city to explore", "No automatic location tracking."),
-            ]:
-                frame = ctk.CTkFrame(self.cities, fg_color=t.PANEL, corner_radius=22)
-                frame.pack(fill="x", pady=(0, 10))
-                t.label(frame, title, size=14).pack(anchor="w", padx=16, pady=(14, 3))
-                t.label(frame, detail, size=12, color=t.MUTED, justify="left").pack(
-                    anchor="w", padx=16, pady=(0, 13)
-                )
-            return
-        for loc, result in s.cities.items():
+        visible = dict(s.cities)
+        if s.bundle and s.bundle.location not in visible and len(visible) < 3:
+            visible = {
+                s.bundle.location: LocationWeatherResult(s.bundle.location, s.bundle),
+                **visible,
+            }
+        for loc in SUGGESTED_CITIES:
+            if len(visible) == 3:
+                break
+            if all(existing.provider_id != loc.provider_id for existing in visible):
+                visible[loc] = LocationWeatherResult(loc)
+        row_height = max(
+            84,
+            int(
+                (int(self.map.cget("height")) / self.shell._get_widget_scaling() - 8)
+                / 3
+            ),
+        )
+        for loc, result in visible.items():
             frame = ctk.CTkFrame(
                 self.cities,
                 fg_color=t.PANEL,
                 corner_radius=24,
-                height=90 if self.winfo_height() < 820 else 98,
+                height=row_height,
             )
             frame.pack(fill="x", pady=(0, 8))
             frame.pack_propagate(False)
             current = result.weather.current if result.weather else None
             left = ctk.CTkFrame(frame, fg_color="transparent")
-            left.pack(side="left", fill="both", expand=True, padx=(18, 4), pady=10)
+            left.pack(
+                side="left",
+                fill="both",
+                expand=True,
+                padx=(18, 4),
+                pady=max(8, (row_height - 70) // 2),
+            )
             t.label(
                 left, loc.country, size=10, color=t.MUTED, anchor="w", height=15
             ).pack(fill="x")
             name = t.button(
                 left,
                 loc.name,
-                lambda l=loc: self.choose(l),
+                lambda l=loc, known=current: (
+                    self.choose(l) if known else self.load_city(l)
+                ),
                 width=90,
                 height=27,
                 anchor="w",
@@ -773,24 +850,35 @@ class SkyCastWindow(ctk.CTk):
                     else (
                         "Retry needed"
                         if result.error
-                        else current.description if current else "Unavailable"
+                        else current.description if current else "Load forecast"
                     )
                 )
             )
-            t.label(
-                left,
-                detail,
-                size=11,
-                color=t.ERROR if result.error else t.MUTED,
-                anchor="w",
-                wraplength=145,
-            ).pack(fill="x", pady=(4, 0))
+            if current or loc in s.city_loading:
+                t.label(
+                    left,
+                    detail,
+                    size=11,
+                    color=t.ERROR if result.error else t.MUTED,
+                    anchor="w",
+                    wraplength=145,
+                ).pack(fill="x", pady=(4, 0))
+            else:
+                t.button(
+                    left,
+                    "Retry forecast" if result.error else "Load forecast",
+                    lambda l=loc: self.load_city(l),
+                    width=100,
+                    height=24,
+                    text_color=t.SELECTED,
+                    anchor="w",
+                ).pack(anchor="w")
             right = ctk.CTkFrame(frame, fg_color="transparent", width=64)
             right.pack(side="right", padx=(0, 14), pady=6)
             icon = ctk.CTkLabel(
                 right,
                 text="",
-                image=self.icons.image(current.icon_id if current else "unknown", 43),
+                image=self.icons.image(current.icon_id, 43) if current else None,
                 height=43,
             )
             icon.pack()
@@ -803,9 +891,17 @@ class SkyCastWindow(ctk.CTk):
             reading.pack()
             self.city_temperature_labels.append(reading)
             # Context actions leave the compact country / city / condition layout clear.
+            if loc not in s.cities:
+                continue
             for widget in (frame, name, icon, reading):
                 widget.bind("<Button-3>", lambda e, l=loc: self.city_actions(l))
             name.bind("<Shift-F10>", lambda e, l=loc: self.city_actions(l))
+
+    def load_city(self, location):
+        cities = self.controller.state.cities
+        if location not in cities and len(cities) < 3:
+            cities[location] = LocationWeatherResult(location)
+        self.refresh_city(location)
 
     def city_actions(self, location):
         dialog = ctk.CTkToplevel(self)

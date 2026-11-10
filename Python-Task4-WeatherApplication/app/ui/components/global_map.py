@@ -56,19 +56,14 @@ class GlobalMap(tk.Canvas):
             color="#14151b",
             height=50,
         ).pack(pady=(10, 8))
-        # Original canvas artwork, not a radar or satellite layer.
-        scene = tk.Canvas(
-            self.exploration, width=150, height=52, bg="#363447", highlightthickness=0
-        )
-        scene.pack()
-        for x, y, r, c in [
-            (24, 20, 24, "#4c4962"),
-            (65, 12, 27, "#666077"),
-            (104, 12, 24, "#4d4960"),
-            (138, 20, 25, "#393647"),
-        ]:
-            scene.create_oval(x - r, y - r, x + r, y + r, fill=c, outline="")
-        scene.create_line(78, 8, 65, 29, 80, 27, 62, 49, fill="#e7ddf8", width=3)
+        try:
+            with Image.open(ASSET.with_name("storm_thumbnail.png")) as source:
+                preview = ctk.CTkImage(
+                    light_image=source.copy(), dark_image=source.copy(), size=(150, 52)
+                )
+        except OSError:
+            preview = None
+        ctk.CTkLabel(self.exploration, text="", image=preview, height=52).pack()
         t.button(
             self.exploration,
             "Get started",
@@ -199,10 +194,11 @@ class GlobalMap(tk.Canvas):
             self.tag_bind(tag, "<Button-1>", lambda e, l=location: self.select(l))
             self.tag_bind(tag, "<Enter>", lambda e: self.configure(cursor="hand2"))
             self.tag_bind(tag, "<Leave>", lambda e: self.configure(cursor=""))
-            if active:
+            if 0 <= x <= w and 0 <= y <= h:
                 self.create_text(
-                    min(max(x, 75), w - 75),
-                    max(18, y - 23),
+                    min(max(x + 15, 4), w - 82),
+                    y,
+                    anchor="w",
                     text=location.name,
                     fill="#f5f5f7",
                     font=("Arial", 12, "bold"),

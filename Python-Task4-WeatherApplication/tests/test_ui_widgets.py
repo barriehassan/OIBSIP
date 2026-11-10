@@ -254,3 +254,40 @@ def test_theme_switch_keeps_weather_and_units(window):
     assert window.cget("fg_color") == "#292929"
     assert window.controller.state.unit == "°F"
     assert not window.controller.workers.pending
+
+
+def test_maximized_scaled_forecast_fits_and_map_uses_window_height(bundle, location, now):
+    if not os.environ.get("DISPLAY") and os.name != "nt":
+        pytest.skip("A display is required for genuine Tk widget tests")
+    import customtkinter as ctk
+
+    ctk.set_widget_scaling(1.25)
+    window = None
+    try:
+        from app.ui.window import SkyCastWindow
+        controller = Controller(Backend(), Workers(), clock=lambda: now)
+        ready(controller, bundle, location)
+        window = SkyCastWindow(controller, remote_icons=False)
+        window.geometry("2048x1252")
+        window.update()
+        window.reflow()
+        window.update()
+        cards = window.card_strip.winfo_children()
+        canvas = window.card_strip._parent_canvas
+        assert len(cards) == 7
+        assert cards[-1].winfo_x() + cards[-1].winfo_width() <= canvas.winfo_width()
+        assert cards[0].winfo_width() > cards[1].winfo_width() * 1.8
+        assert window.map.winfo_height() > 390
+        assert window.cities.winfo_width() > window.page.winfo_width() * 0.19
+        assert (
+            abs(
+                window.search_group.winfo_rootx()
+                + window.search_group.winfo_width() / 2
+                - (window.header.winfo_rootx() + window.header.winfo_width() * 0.52)
+            )
+            < 6
+        )
+    finally:
+        if window is not None:
+            window.close()
+        ctk.set_widget_scaling(1)

@@ -20,8 +20,8 @@ class Enhancements:
         self.notice = notice
         self.voice_key = None
         self.approximate_key = None
-        self.controls = ctk.CTkFrame(window.header, fg_color="transparent")
-        self.controls.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(5, 0))
+        self.controls = ctk.CTkFrame(window.detail_panel, fg_color="transparent")
+        self.controls.pack(fill="x", before=window.detail_panel.winfo_children()[0], pady=(0, 8))
         self.listen = t.button(
             self.controls,
             "♪ Listen to Weather",
@@ -59,7 +59,7 @@ class Enhancements:
         )
         self.detect.pack(side="left", padx=(8, 10))
         self.indicator = t.label(
-            self.controls,
+            window.header,
             "",
             size=10,
             color=t.MUTED,
@@ -67,7 +67,8 @@ class Enhancements:
             wraplength=560,
             height=26,
         )
-        self.indicator.pack(side="right", fill="x", expand=True)
+        self.indicator.grid(row=1, column=0, columnspan=3, sticky="e")
+        self.indicator.grid_remove()
         self.panel = ctk.CTkFrame(window.detail_panel, fg_color="transparent")
         self.panel.pack(fill="x", pady=10)
         self.solar = t.label(
@@ -325,11 +326,19 @@ class Enhancements:
             self.result_panel.pack_forget()
         if not b:
             self.indicator.configure(text=self.notice)
+            if self.notice:
+                self.indicator.grid()
+            else:
+                self.indicator.grid_remove()
             return
         source = state.cache_source
         if source in ("recent cache", "stale cache"):
             source = cache_kind(b, self.window.controller.clock())
         self.indicator.configure(text=provenance(b, source, state.offline))
+        if source != "network" or state.offline:
+            self.indicator.grid()
+        else:
+            self.indicator.grid_remove()
         if state.storage_notice:
             self.feedback.configure(text=state.storage_notice)
         window = hour_window(

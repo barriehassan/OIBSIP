@@ -6,11 +6,11 @@
 - **Hosted weather icons:** OpenWeather, documented at https://docs.openweather.co.uk/weather-conditions . Allowed condition IDs select `https://openweathermap.org/img/wn/<id>@2x.png`. Fetch at runtime, retain only in memory, credit visibly; no hosted PNG files are bundled for redistribution. This uses the official task's icon convention when reachable.
 - **Fallback weather illustrations:** Original procedural Pillow artwork in `app/ui/components/weather_icon.py`, created for SkyCast in Task 04. Used when hosted icons are unavailable or still loading; not represented as OpenWeather artwork. Map badges use these local illustrations. Text preserves the actual condition.
 - **Brand:** Text-only NOMOLI FORGE / SkyCast identity; no new final company logo is asserted.
-- **Mockup:** User-supplied design reference only. Its full screenshot, avatar, weather artwork and promotional photo are not redistributed as application assets.
+- **Mockup:** User-supplied reference for dashboard layout, spacing and typography.
 
 ## Alignment revision artwork
 
-`app/ui/components/chrome.py` draws original interface symbols. The map exploration thumbnail is original canvas artwork in `global_map.py`; it is illustrative, not radar or satellite imagery. No avatar photograph or other artwork from the reference screenshot is redistributed. The S monogram represents SkyCast and opens About.
+`app/ui/components/chrome.py` draws original interface symbols. The S monogram represents SkyCast and opens About.
 
 ## Task 05 services and libraries
 
@@ -21,3 +21,5 @@ Local Windows speech: pyttsx3 2.99, https://pypi.org/project/pyttsx3/2.99/ (MPL-
 ## Task 06 review
 
 Current provider terms, attribution, IP service caveats and distribution limitations are reviewed in `docs/TASK06_RELEASE_AUDIT.md`, section I (2026-11-02). This educational source candidate does not establish permission for future commercial/promotional service use.
+
+The storm thumbnail in the map card is a crop from the project’s supplied generated SkyCast design reference. It is decorative artwork.
