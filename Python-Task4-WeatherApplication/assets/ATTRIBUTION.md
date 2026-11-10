@@ -17,3 +17,7 @@
 Optional approximate location: IPWHOIS.IO, https://ipwhois.io/documentation and https://ipwhois.io/terms . Requested only after explicit consent; approximate results require confirmation.
 
 Local Windows speech: pyttsx3 2.99, https://pypi.org/project/pyttsx3/2.99/ (MPL-2.0), using installed Windows SAPI5 voices. Installed through requirements, not bundled as modified library source or redistributed voice assets. Engine API: https://pyttsx3.readthedocs.io/en/latest/engine.html .
+
+## Task 06 review
+
+Current provider terms, attribution, IP service caveats and distribution limitations are reviewed in `docs/TASK06_RELEASE_AUDIT.md`, section I (2026-11-02). This educational source candidate does not establish permission for future commercial/promotional service use.

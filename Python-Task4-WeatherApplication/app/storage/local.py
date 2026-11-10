@@ -169,7 +169,7 @@ class LocalStore:
                     if identity(location) != key:
                         raise ValueError()
                     result.append(location)
-                except (ValueError, TypeError, KeyError):
+                except (ValueError, TypeError, KeyError, RecursionError):
                     invalid += 1
             return result, invalid
 
@@ -225,7 +225,7 @@ class LocalStore:
             if age < timedelta(0) or age > timedelta(days=7):
                 return None
             return bundle
-        except (ValueError, TypeError, KeyError, OverflowError) as exc:
+        except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
             raise StorageError(
                 "A cached record is invalid; use Refresh to retrieve weather again."
             ) from exc

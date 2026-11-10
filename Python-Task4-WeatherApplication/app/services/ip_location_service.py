@@ -91,7 +91,7 @@ class IpLocationService:
                             )
                     try:
                         payload = json.loads(data)
-                    except (ValueError, UnicodeError):
+                    except (ValueError, UnicodeError, RecursionError):
                         raise LocationValidationError(
                             "Invalid location response. Please search manually."
                         ) from None

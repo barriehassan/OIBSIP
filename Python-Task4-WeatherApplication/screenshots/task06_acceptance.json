@@ -1,0 +1,40 @@
+{
+  "captured_at": "2026-11-02T12:38:37.642269+00:00",
+  "platform": "Linux / Python 3.12 / Tk 8.6",
+  "live_results": [
+    {
+      "query": "London, United Kingdom",
+      "location": "London",
+      "country": "United Kingdom",
+      "timezone": "Europe/London",
+      "retrieved_at": "2026-11-02T12:37:54.156620+00:00",
+      "upcoming_hour_count": 6,
+      "daily_count": 7,
+      "weather_code": 2
+    },
+    {
+      "query": "Freetown, Sierra Leone",
+      "location": "Freetown",
+      "country": "Sierra Leone",
+      "timezone": "Africa/Freetown",
+      "retrieved_at": "2026-11-02T12:38:09.842176+00:00",
+      "upcoming_hour_count": 6,
+      "daily_count": 7,
+      "weather_code": 55
+    },
+    {
+      "postal_query": "10115",
+      "matches": 1,
+      "first_country": "United States",
+      "first_city": "New York"
+    }
+  ],
+  "workflow": "search, selection, C/F, tabs, day selection, map/city rendering, favorite save/reopen, cache reuse, simulated offline and timeout, live recovery, restart",
+  "not_executed": [
+    "Windows speech/audio",
+    "real public-IP lookup",
+    "native Windows DPI/accessibility"
+  ],
+  "icons": "Original fallback icons; no hosted-icon requests in this acceptance run",
+  "callback_errors": []
+}

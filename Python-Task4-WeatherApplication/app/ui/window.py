@@ -18,7 +18,7 @@ from .presentation import (
 from .components.forecast import ForecastCard, HourlyStrip, StatCard
 from .components.rain_chart import RainChart
 from .components.global_map import GlobalMap
-from .components.weather_icon import IconImages, fetch_icons, VALID_IDS
+from .components.weather_icon import IconImages, VALID_IDS
 from .components.chrome import symbol
 from .enhancements import Enhancements
 from app.storage.local import LocalStore, StorageError
@@ -326,7 +326,7 @@ class SkyCastWindow(ctk.CTk):
     def map_help(self):
         self.text_dialog(
             "Explore the map",
-            "Search a city to see its weather on the map.\n\nUse the grid menu or Forecast button to open details and add up to three cities.\n\nDrag to pan, use + / − to zoom, reset to return to the overview, layers to show or hide markers, and locate to center the active city.\n\nThe map shows land and your selected locations. Wind fields, ocean conditions and radar layers are not available.",
+            "Search a city to see its weather on the map.\n\nUse the grid menu or Forecast button to open details and add up to three cities.\n\nDrag to pan, use + / − to zoom, reset to return to the overview, layers to show or hide markers, and locate to center the active city.\n\nPins show last-retrieved conditions; select a place to inspect its download time and cache status. The map shows land and your selected locations. Wind fields, ocean conditions and radar layers are not available.",
         )
 
     def set_theme(self, light):
@@ -758,9 +758,23 @@ class SkyCastWindow(ctk.CTk):
                 "Updating…"
                 if loc in s.city_loading
                 else (
-                    "Retry needed"
-                    if result.error
-                    else current.description if current else "Unavailable"
+                    (
+                        "Cached · "
+                        + result.weather.retrieved_at.astimezone(
+                            ZoneInfo(result.weather.timezone)
+                        ).strftime("%d %b %H:%M")
+                    )
+                    if result.weather
+                    and (
+                        result.error
+                        or self.controller.clock() - result.weather.retrieved_at
+                        >= timedelta(minutes=20)
+                    )
+                    else (
+                        "Retry needed"
+                        if result.error
+                        else current.description if current else "Unavailable"
+                    )
                 )
             )
             t.label(
@@ -796,9 +810,20 @@ class SkyCastWindow(ctk.CTk):
     def city_actions(self, location):
         dialog = ctk.CTkToplevel(self)
         dialog.title(location.name)
-        dialog.geometry("360x220")
+        dialog.geometry("360x280")
         dialog.transient(self)
-        t.label(dialog, location_label(location), wraplength=320).pack(pady=18)
+        t.label(dialog, location_label(location), wraplength=320).pack(pady=12)
+        result = self.controller.state.cities.get(location)
+        if result and result.weather:
+            b = result.weather
+            t.label(
+                dialog,
+                f"{b.current.description} · last retrieved\n"
+                + local_hour(b.retrieved_at, b.timezone),
+                wraplength=320,
+                color=t.MUTED,
+                size=12,
+            ).pack(pady=(0, 8))
 
         def action(callback):
             dialog.destroy()
@@ -960,4 +985,8 @@ class SkyCastWindow(ctk.CTk):
         self.controller.close()
         if self.light_mode:
             self.set_theme(False)
+        # All windows in this Tcl interpreter are closing, including CTk's
+        # appearance/DPI timers and deferred geometry/focus callbacks.
+        for ident in self.tk.call("after", "info"):
+            self.tk.call("after", "cancel", ident)
         self.destroy()

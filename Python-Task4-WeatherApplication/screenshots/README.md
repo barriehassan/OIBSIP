@@ -27,3 +27,21 @@ Eight captures made by `scripts/task05_smoke.py` on Linux/Python 3.12/Tk 8.6. We
 - [Offline](SkyCast_Task05_Offline.png)
 
 The details, Fahrenheit, favorites and consent views are intentionally scrolled down within the expandable content area. The 1024×700 view uses scrolling to reach remaining cards/map content. Native Windows DPI/audio checks remain pending.
+
+
+## Task 06 release-candidate evidence — Linux/Tk 8.6
+
+Captured on 2026-11-02 by `scripts/task06_acceptance.py` using actual retrieved London/Freetown weather. Offline and timeout paths deliberately simulate transport failures; cache snapshots keep original timestamps. No real speech or public-IP request was made. Original fallback weather illustrations are used. These are actual widgets, not generated mockups or Windows captures.
+
+- [1024x700](SkyCast_Task06_1024x700.png)
+- [1366x768](SkyCast_Task06_1366x768.png)
+- [Cached City](SkyCast_Task06_Cached_City.png)
+- [Dashboard](SkyCast_Task06_Dashboard.png)
+- [Details](SkyCast_Task06_Details.png)
+- [Favorites](SkyCast_Task06_Favorites.png)
+- [Location Consent](SkyCast_Task06_Location_Consent.png)
+- [Offline](SkyCast_Task06_Offline.png)
+- [Seven Days](SkyCast_Task06_Seven_Days.png)
+- [Tomorrow Fahrenheit](SkyCast_Task06_Tomorrow_Fahrenheit.png)
+
+[Machine-readable acceptance observations](task06_acceptance.json). The first close/reopen emitted Tcl timer warnings; the subsequent cleanup fix passed the final shutdown/reopen regression. Images predate that nonvisual fix. Details are scrolled inside the content area; 1024×700 uses scrollbars for remaining content.

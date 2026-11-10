@@ -9,3 +9,20 @@ __pycache__/
 .env.*
 cache/
 *.tmp
+
+# Local configuration, logs and build output
+venv/
+.envrc
+*.log
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+build/
+dist/
+*.egg-info/
+.coverage
+htmlcov/
+coverage.xml
+preferences.json
